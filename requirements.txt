@@ -1,0 +1,16 @@
+# 核心框架
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# HTTP客户端
+requests==2.31.0
+
+# 配置和日志
+python-dotenv==1.0.0
+loguru==0.7.2
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# 异步文件处理（用于文件上传）
+aiofiles==23.2.1
