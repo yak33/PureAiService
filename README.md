@@ -7,6 +7,7 @@
 - **纯AI驱动**: 所有功能通过大模型API实现，无需第三方处理库
 - **多模型支持**: 支持硅基流动平台的AI模型（GLM和Kimi）
 - **功能丰富**: 文本分析、代码辅助、OCR识别、图像描述生成等
+- **现代化前端**: 基于Vue 3 + Element Plus的美观Web界面
 - **简单易用**: RESTful API设计，易于集成
 - **高度可扩展**: 轻松添加新的AI功能
 - **极简架构**: 只保留必要的文件和依赖
@@ -33,6 +34,17 @@ ai-service/
 │   │
 │   └── __init__.py
 │
+├── frontend/                  # 前端项目
+│   ├── src/                  # 源代码
+│   │   ├── views/           # 页面组件
+│   │   ├── services/        # API服务
+│   │   ├── App.vue          # 根组件
+│   │   └── main.js          # 入口文件
+│   ├── package.json         # 前端依赖
+│   ├── vite.config.js       # 构建配置
+│   └── README.md            # 前端说明
+│
+├── static/                    # 前端构建输出（自动生成）
 ├── logs/                      # 日志目录
 ├── .env                       # 环境变量配置
 ├── .gitignore                # Git忽略文件
@@ -45,11 +57,16 @@ ai-service/
 
 ### 📄 核心文件说明
 
-- **main.py**: FastAPI应用主入口，配置中间件和路由
+**后端文件：**
+- **main.py**: FastAPI应用主入口，配置中间件和路由，集成前端静态文件服务
 - **start.py**: 便捷启动脚本，一键运行服务
 - **.env**: 配置API密钥和服务参数
 - **pure_ai_service.py**: 核心AI服务类，所有功能通过大模型API实现
 - **siliconflow_models.py**: 硅基流动平台模型配置（GLM和Kimi）
+
+**前端文件：**
+- **frontend/**: Vue 3前端项目目录
+- **static/**: 前端构建后的静态文件（由后端服务托管）
 
 ## 📦 安装
 
@@ -59,7 +76,7 @@ git clone https://github.com/yourusername/ai-service.git
 cd ai-service
 ```
 
-### 2. 安装依赖
+### 2. 安装后端依赖
 
 ```bash
 # 使用pip直接安装
@@ -71,7 +88,20 @@ conda activate ai-service
 pip install -r requirements.txt
 ```
 
-### 3. 配置环境
+### 3. 安装前端依赖
+
+```bash
+cd frontend
+
+# 使用pnpm（推荐）
+npm install -g pnpm
+pnpm install
+
+# 或使用npm
+npm install
+```
+
+### 4. 配置环境
 
 编辑 `.env` 文件，配置API密钥：
 ```env
@@ -85,29 +115,52 @@ DEFAULT_MODEL=zai-org/GLM-4.5
 
 ## 🚀 启动服务
 
-### 方式1：使用快速启动脚本（推荐）
+### 🎯 完整服务启动（前端+后端）
+
+#### 方式1：一键启动（推荐）
 ```bash
+# 1. 构建前端
+cd frontend
+pnpm build  # 或 npm run build
+
+# 2. 启动后端服务（包含前端界面）
+cd ..
 python start.py
 ```
 
-### 方式2：使用main.py
+#### 方式2：分别启动（开发模式）
 ```bash
+# 终端1：启动后端服务
 python main.py
+
+# 终端2：启动前端开发服务器
+cd frontend
+pnpm dev  # 或 npm run dev
 ```
 
-### 方式3：使用uvicorn命令
+### 🔧 仅启动后端API服务
+
 ```bash
-# 支持热重载
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# 方式1：使用快速启动脚本
+python start.py
 
-# 生产环境
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+# 方式2：使用main.py
+python main.py
+
+# 方式3：使用uvicorn命令
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-服务启动后访问：
-- 🏠 **主页**: http://localhost:8000
+### 📱 访问地址
+
+**完整服务（推荐）:**
+- 🎨 **Web界面**: http://localhost:8000 （现代化前端界面）
 - 📚 **API文档**: http://localhost:8000/docs （可交互测试）
 - 📊 **ReDoc文档**: http://localhost:8000/redoc （只读文档）
+
+**开发模式:**
+- 🎨 **前端开发**: http://localhost:3000 （热重载，自动打开浏览器）
+- 🔌 **后端API**: http://localhost:8000
 
 ## 📚 API接口
 
@@ -265,9 +318,9 @@ curl http://localhost:8000/api/v1/ai/models
 3. **Token限制**: 不同模型有不同的最大Token限制
 4. **费用**: 部分模型是收费的，请查看模型列表了解价格
 
-## 📦 最小依赖
+## 📦 技术栈
 
-本项目只需要6个核心依赖：
+### 后端依赖
 - **fastapi**: Web框架
 - **uvicorn[standard]**: ASGI服务器
 - **requests**: HTTP客户端
@@ -276,6 +329,14 @@ curl http://localhost:8000/api/v1/ai/models
 - **loguru**: 日志管理
 - **aiofiles**: 异步文件处理
 - **python-multipart**: 文件上传支持
+
+### 前端依赖
+- **Vue 3**: 渐进式JavaScript框架
+- **Element Plus**: Vue 3组件库
+- **Vue Router**: 官方路由管理器
+- **Axios**: HTTP客户端
+- **Vite**: 现代化构建工具
+- **pnpm**: 快速、节省磁盘空间的包管理器
 
 ## 💡 设计理念
 
@@ -287,20 +348,30 @@ curl http://localhost:8000/api/v1/ai/models
 
 ## 🔧 故障排除
 
-### 服务无法启动
-- 检查Python版本（需要3.8+）
-- 确认依赖已正确安装
-- 查看日志文件 `logs/app.log`
+### 后端服务问题
+- **服务无法启动**: 检查Python版本（需要3.8+）、确认依赖已正确安装、查看日志文件 `logs/app.log`
+- **API调用失败**: 检查API密钥是否正确、确认网络可以访问 `api.siliconflow.cn`、查看具体错误信息
+- **模型不可用**: 某些模型可能需要特殊权限、使用免费模型进行测试、查看模型列表确认可用模型
 
-### API调用失败
-- 检查API密钥是否正确
-- 确认网络可以访问 `api.siliconflow.cn`
-- 查看具体错误信息
+### 前端服务问题
+- **依赖安装失败**: 尝试使用不同的镜像源、清理缓存后重新安装、使用pnpm替代npm
+- **页面无法访问**: 检查端口是否被占用、确认后端服务已启动、检查代理配置
+- **API请求失败**: 确认后端服务运行正常、检查网络连接、查看浏览器控制台错误信息
 
-### 模型不可用
-- 某些模型可能需要特殊权限
-- 使用免费模型进行测试
-- 查看模型列表确认可用模型
+### 常见解决方案
+```bash
+# 清理并重新安装依赖
+cd frontend
+rm -rf node_modules package-lock.json
+pnpm install
+
+# 重新构建前端
+pnpm build
+
+# 重启完整服务
+cd ..
+python start.py
+```
 
 ## 📄 许可证
 
