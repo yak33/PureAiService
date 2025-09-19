@@ -106,12 +106,16 @@ npm install
 编辑 `.env` 文件，配置API密钥：
 ```env
 # AI服务配置 - 硅基流动平台
-OPENAI_API_KEY=sk-rkcwltjvwgipvihuuafnhiwcpylxbmnvympexwzckqpiejjo
+OPENAI_API_KEY=your_siliconflow_api_key_here
 OPENAI_BASE_URL=https://api.siliconflow.cn/v1
 
 # 默认模型配置
 DEFAULT_MODEL=zai-org/GLM-4.5
 ```
+
+**重要提醒**: 
+- 请将 `your_siliconflow_api_key_here` 替换为你的真实API密钥
+- 确保 `.env` 文件已添加到 `.gitignore` 中，避免密钥泄露
 
 ## 🚀 启动服务
 
