@@ -1,4 +1,5 @@
 import uvicorn
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -21,6 +22,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 挂载静态文件服务（前端构建后的文件）
+static_dir = "static"
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    # 为前端路由提供fallback
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")
 
 # 注册新的AI路由
 app.include_router(ai_router, prefix="/api/v1")
