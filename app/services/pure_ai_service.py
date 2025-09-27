@@ -7,7 +7,9 @@ import os
 import json
 import base64
 from typing import Optional, Dict, Any, List
-import requests
+
+import httpx
+from httpx import RequestError, ResponseNotRead
 from app.core.config import settings
 from app.core.logger import app_logger
 from app.core.siliconflow_models import SILICONFLOW_MODELS, DEFAULT_MODEL, RECOMMENDED_MODELS
@@ -18,13 +20,15 @@ class PureAIService:
     
     def __init__(self):
         self.api_key = settings.openai_api_key
-        self.base_url = settings.openai_base_url
+        self.base_url = settings.openai_base_url.rstrip("/")
+        self.timeout = settings.api_timeout
         # 硅基流动可能需要特定的请求头格式
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        self.default_model = DEFAULT_MODEL
+        self.default_model = settings.default_model or DEFAULT_MODEL
+        self._timeout = httpx.Timeout(self.timeout)
         
     async def call_ai(
         self, 
@@ -46,123 +50,217 @@ class PureAIService:
         """
         try:
             model = model or self.default_model
-            
+
             # 移除敏感信息，只记录部分内容
             log_messages = json.dumps(messages, ensure_ascii=False)
-            
+
             # 调试信息：检查API配置
             app_logger.info(f"API配置检查 - base_url: {self.base_url}")
             app_logger.info(f"API配置检查 - api_key前8位: {self.api_key[:8]}...")
-            app_logger.info(f"API配置检查 - headers: {self.headers}")
-            
-            app_logger.info(f"开始调用AI模型: model={model}, temperature={temperature}, max_tokens={max_tokens}, stream={stream}")
+            app_logger.debug(f"API配置检查 - headers: {self._redact_headers(self.headers)}")
+
+            app_logger.info(
+                "开始调用AI模型: model=%s, temperature=%s, max_tokens=%s, stream=%s",
+                model,
+                temperature,
+                max_tokens,
+                stream,
+            )
             app_logger.debug(f"AI请求内容: {log_messages}")
-            
-            # 强制刷新日志缓冲区
-            import sys
-            sys.stdout.flush()
 
             payload = {
                 "model": model,
                 "messages": messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
-                "stream": stream
+                "stream": stream,
             }
-            
-            # 完整的请求URL
-            full_url = f"{self.base_url}/chat/completions"
-            app_logger.info(f"完整请求URL: {full_url}")
-            app_logger.info(f"请求payload: {payload}")
-            
-            response = requests.post(
-                full_url,
+
+            async with httpx.AsyncClient(
+                base_url=self.base_url,
                 headers=self.headers,
-                json=payload,
-                timeout=60
-            )
-            
-            # 记录响应状态和头信息
-            app_logger.info(f"响应状态码: {response.status_code}")
-            app_logger.info(f"响应头: {dict(response.headers)}")
-            if response.status_code != 200:
-                app_logger.error(f"响应内容: {response.text}")
-            
-            if response.status_code == 200:
+                timeout=self._timeout,
+            ) as client:
+                endpoint = "/chat/completions"
+                app_logger.info(f"完整请求路径: {endpoint}")
+                app_logger.debug(f"请求payload: {payload}")
+
                 if stream:
-                    # 处理流式响应
-                    content_parts = []
-                    model_name = None
-                    usage_info = {}
-                    finish_reason = None
+                    async with client.stream("POST", endpoint, json=payload) as response:
+                        app_logger.info(f"响应状态码: {response.status_code}")
+                        app_logger.info(f"响应头: {dict(response.headers)}")
 
-                    try:
-                        for line in response.iter_lines(decode_unicode=True):
-                            if line and line.startswith('data: '):
-                                data_str = line[6:]  # 去掉 'data: ' 前缀
-                                if data_str.strip() == '[DONE]':
-                                    break
-                                try:
-                                    data = json.loads(data_str)
-                                    if 'choices' in data and data['choices']:
-                                        delta = data['choices'][0].get('delta', {})
-                                        if 'content' in delta:
-                                            content_parts.append(delta['content'])
-                                        finish_reason = data['choices'][0].get('finish_reason')
-                                    if 'model' in data:
-                                        model_name = data['model']
-                                    if 'usage' in data:
-                                        usage_info = data['usage']
-                                except json.JSONDecodeError:
-                                    continue
+                        if not response.is_success:
+                            return await self._build_error_response(response)
 
-                        full_content = ''.join(content_parts)
-                        app_logger.info(f"AI模型流式调用成功: model={model_name}, finish_reason={finish_reason}")
-                        app_logger.debug(f"AI响应 usage: {usage_info}")
+                        return await self._consume_stream_response(response)
 
-                        return {
-                            "success": True,
-                            "content": full_content,
-                            "model": model_name,
-                            "usage": usage_info,
-                            "finish_reason": finish_reason
-                        }
-                    except Exception as e:
-                        app_logger.error(f"解析流式响应失败: {str(e)}")
-                        return {
-                            "success": False,
-                            "error": f"解析流式响应失败: {str(e)}"
-                        }
-                else:
-                    # 处理非流式响应
+                response = await client.post(endpoint, json=payload)
+                app_logger.info(f"响应状态码: {response.status_code}")
+                app_logger.info(f"响应头: {dict(response.headers)}")
+
+                if not response.is_success:
+                    return await self._build_error_response(response)
+
+                try:
                     result = response.json()
-                    usage = result.get("usage", {})
-                    finish_reason = result["choices"][0].get("finish_reason")
-
-                    app_logger.info(f"AI模型调用成功: model={result.get('model')}, finish_reason={finish_reason}")
-                    app_logger.debug(f"AI响应 usage: {usage}")
-
+                except json.JSONDecodeError as exc:
+                    app_logger.error(f"解析响应JSON失败: {exc}")
                     return {
-                        "success": True,
-                        "content": result["choices"][0]["message"]["content"],
-                        "model": result.get("model"),
-                        "usage": usage,
-                        "finish_reason": finish_reason
+                        "success": False,
+                        "error": f"解析响应JSON失败: {exc}",
+                        "status_code": response.status_code,
+                        "details": response.text,
                     }
-            else:
-                app_logger.error(f"AI API调用失败: {response.status_code} - {response.text}")
+
+                usage = result.get("usage", {})
+                finish_reason = result.get("choices", [{}])[0].get("finish_reason")
+
+                app_logger.info(
+                    "AI模型调用成功: model=%s, finish_reason=%s",
+                    result.get("model"),
+                    finish_reason,
+                )
+                app_logger.debug(f"AI响应 usage: {usage}")
+
                 return {
-                    "success": False,
-                    "error": f"API调用失败: {response.status_code}",
-                    "details": response.text
+                    "success": True,
+                    "content": result.get("choices", [{}])[0].get("message", {}).get("content"),
+                    "model": result.get("model"),
+                    "usage": usage,
+                    "finish_reason": finish_reason,
                 }
-                
-        except Exception as e:
-            app_logger.error(f"AI API调用异常: {str(e)}")
+
+        except RequestError as exc:
+            app_logger.error(f"HTTP请求异常: {exc}")
             return {
                 "success": False,
-                "error": f"API调用异常: {str(e)}"
+                "error": f"HTTP请求异常: {exc}",
             }
+        except Exception as e:
+            app_logger.exception("AI API调用异常")
+            return {
+                "success": False,
+                "error": f"API调用异常: {str(e)}",
+            }
+
+    async def _consume_stream_response(self, response: httpx.Response) -> Dict[str, Any]:
+        content_parts: List[str] = []
+        model_name: Optional[str] = None
+        usage_info: Dict[str, Any] = {}
+        finish_reason: Optional[str] = None
+
+        try:
+            async for line in response.aiter_lines():
+                if not line:
+                    continue
+                if not line.startswith("data:"):
+                    continue
+
+                data_str = line[5:].strip()
+                if not data_str:
+                    continue
+                if data_str == "[DONE]":
+                    break
+
+                try:
+                    data = json.loads(data_str)
+                except json.JSONDecodeError:
+                    continue
+
+                if "choices" in data and data["choices"]:
+                    delta = data["choices"][0].get("delta", {})
+                    if "content" in delta:
+                        content_parts.append(delta["content"])
+                    finish_reason = data["choices"][0].get("finish_reason") or finish_reason
+                if "model" in data:
+                    model_name = data["model"]
+                if "usage" in data:
+                    usage_info = data["usage"]
+
+            full_content = "".join(content_parts)
+            app_logger.info(
+                "AI模型流式调用成功: model=%s, finish_reason=%s",
+                model_name,
+                finish_reason,
+            )
+            app_logger.debug(f"AI响应 usage: {usage_info}")
+
+            return {
+                "success": True,
+                "content": full_content,
+                "model": model_name,
+                "usage": usage_info,
+                "finish_reason": finish_reason,
+            }
+        except Exception as exc:
+            app_logger.error(f"解析流式响应失败: {exc}")
+            return {
+                "success": False,
+                "error": f"解析流式响应失败: {exc}",
+            }
+
+    async def _build_error_response(self, response: httpx.Response) -> Dict[str, Any]:
+        raw_text = await self._read_response_text(response)
+        parsed_payload: Optional[Dict[str, Any]] = None
+        if raw_text:
+            try:
+                parsed = json.loads(raw_text)
+                if isinstance(parsed, dict):
+                    parsed_payload = parsed
+            except json.JSONDecodeError:
+                parsed_payload = None
+
+        message = self._extract_error_message(parsed_payload) if parsed_payload else None
+        message = message or raw_text or f"HTTP {response.status_code}"
+
+        app_logger.error(
+            "AI API调用失败: status=%s, message=%s",
+            response.status_code,
+            message,
+        )
+
+        return {
+            "success": False,
+            "error": message,
+            "status_code": response.status_code,
+            "details": parsed_payload or raw_text,
+        }
+
+    async def _read_response_text(self, response: httpx.Response) -> str:
+        try:
+            content = await response.aread()
+        except ResponseNotRead:
+            content = response.content
+
+        if not content:
+            return ""
+        if isinstance(content, bytes):
+            return content.decode("utf-8", errors="ignore")
+        return str(content)
+
+    def _extract_error_message(self, payload: Dict[str, Any]) -> Optional[str]:
+        for key in ("error", "message", "detail"):
+            if key not in payload:
+                continue
+            value = payload[key]
+            if isinstance(value, dict):
+                for sub_key in ("message", "detail", "error"):
+                    if sub_key in value and value[sub_key]:
+                        return str(value[sub_key])
+            elif value:
+                return str(value)
+        return None
+
+    @staticmethod
+    def _redact_headers(headers: Dict[str, str]) -> Dict[str, str]:
+        redacted: Dict[str, str] = {}
+        for key, value in headers.items():
+            if key.lower() == "authorization" and value.startswith("Bearer "):
+                redacted[key] = "Bearer ****" + value[-4:]
+            else:
+                redacted[key] = value
+        return redacted
     
     async def analyze_text(
         self,

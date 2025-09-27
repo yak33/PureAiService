@@ -1,106 +1,98 @@
 """
-çº¯AIæœåŠ¡æµ‹è¯•è„šæœ¬
-æµ‹è¯•æ‰€æœ‰AIæœåŠ¡æ¥å£åŠŸèƒ½
+´¿AI·şÎñ²âÊÔ½Å±¾£¨Òì²½°æ£©
 """
 
-import requests
-import json
-import base64
-from typing import Dict, Any
+import asyncio
+from typing import Dict, Any, List
 
-# æœåŠ¡é…ç½®
+import httpx
+
 BASE_URL = "http://localhost:8000/api/v1/ai"
-HEADERS = {"Content-Type": "application/json"}
+DEFAULT_HEADERS = {"Content-Type": "application/json"}
 
 
-def print_result(title: str, result: Dict[str, Any]):
-    """æ‰“å°æµ‹è¯•ç»“æœ"""
+def print_result(title: str, result: Dict[str, Any]) -> None:
     print(f"\n{'='*60}")
-    print(f"ğŸ“Œ {title}")
+    print(f" {title}")
     print(f"{'='*60}")
     if result.get("success"):
-        print("âœ… æˆåŠŸ!")
-        if result.get("result"):
-            print(f"ç»“æœ: {result['result'][:500]}...")
-        elif result.get("content"):
-            print(f"å†…å®¹: {result['content'][:500]}...")
+        print(" ³É¹¦!")
+        payload = result.get("result") or result.get("content")
+        if payload:
+            snippet = payload[:500]
+            suffix = "..." if len(payload) > 500 else ""
+            print(f"ÏìÓ¦ÄÚÈİ: {snippet}{suffix}")
         if result.get("model"):
-            print(f"ä½¿ç”¨æ¨¡å‹: {result['model']}")
+            print(f"Ê¹ÓÃÄ£ĞÍ: {result['model']}")
         if result.get("usage"):
-            print(f"Tokenä½¿ç”¨: {result['usage']}")
+            print(f"TokenÊ¹ÓÃ: {result['usage']}")
     else:
-        print(f"âŒ å¤±è´¥: {result.get('error', 'Unknown error')}")
+        print(f" Ê§°Ü: {result.get('error', 'Unknown error')}")
         if result.get("details"):
-            print(f"è¯¦æƒ…: {result['details']}")
+            print(f"ÏêÇé: {result['details']}")
 
 
-def test_list_models():
-    """æµ‹è¯•è·å–æ¨¡å‹åˆ—è¡¨"""
-    print("\nğŸ” æµ‹è¯•è·å–å¯ç”¨æ¨¡å‹åˆ—è¡¨...")
-    response = requests.get(f"{BASE_URL}/models")
+async def test_list_models(client: httpx.AsyncClient) -> bool:
+    print("\n ²âÊÔ»ñÈ¡¿ÉÓÃÄ£ĞÍÁĞ±í...")
+    response = await client.get("/models")
     if response.status_code == 200:
         data = response.json()
-        print(f"âœ… å‘ç° {len(data['models'])} ä¸ªå¯ç”¨æ¨¡å‹")
-        print(f"é»˜è®¤æ¨¡å‹: {data['default_model']}")
-        print("\næ¨èæ¨¡å‹:")
-        for use_case, model in data['recommended'].items():
+        print(f" ·¢ÏÖ {len(data['models'])} ¸ö¿ÉÓÃÄ£ĞÍ")
+        print(f"Ä¬ÈÏÄ£ĞÍ: {data['default_model']}")
+        print("\nÍÆ¼öÄ£ĞÍ:")
+        for use_case, model in data["recommended"].items():
             print(f"  - {use_case}: {model}")
         return True
     else:
-        print(f"âŒ è·å–æ¨¡å‹åˆ—è¡¨å¤±è´¥: {response.status_code}")
+        print(f" »ñÈ¡Ä£ĞÍÁĞ±íÊ§°Ü: {response.status_code}")
         return False
 
 
-def test_text_analysis():
-    """æµ‹è¯•æ–‡æœ¬åˆ†æåŠŸèƒ½"""
-    test_cases = [
+async def test_text_analysis(client: httpx.AsyncClient) -> None:
+    test_cases: List[Dict[str, Any]] = [
         {
-            "title": "æ–‡æœ¬æ€»ç»“",
+            "title": "ÎÄ±¾×Ü½á",
             "data": {
-                "text": "äººå·¥æ™ºèƒ½ï¼ˆAIï¼‰æ˜¯è®¡ç®—æœºç§‘å­¦çš„ä¸€ä¸ªåˆ†æ”¯ï¼Œå®ƒè‡´åŠ›äºåˆ›å»ºèƒ½å¤Ÿæ¨¡æ‹Ÿäººç±»æ™ºèƒ½çš„ç³»ç»Ÿã€‚AIæŠ€æœ¯åŒ…æ‹¬æœºå™¨å­¦ä¹ ã€æ·±åº¦å­¦ä¹ ã€è‡ªç„¶è¯­è¨€å¤„ç†ç­‰ã€‚è¿‘å¹´æ¥ï¼ŒAIåœ¨åŒ»ç–—è¯Šæ–­ã€è‡ªåŠ¨é©¾é©¶ã€è¯­éŸ³è¯†åˆ«ç­‰é¢†åŸŸå–å¾—äº†é‡å¤§çªç ´ã€‚å¤§å‹è¯­è¨€æ¨¡å‹å¦‚GPTã€BERTç­‰å±•ç¤ºäº†å¼ºå¤§çš„æ–‡æœ¬ç†è§£å’Œç”Ÿæˆèƒ½åŠ›ã€‚",
-                "task": "summarize"
-            }
+                "text": "ÈË¹¤ÖÇÄÜ£¨AI£©ÊÇ¼ÆËã»ú¿ÆÑ§µÄÒ»¸ö·ÖÖ§£¬ËüÖÂÁ¦ÓÚ´´½¨ÄÜ¹»Ä£ÄâÈËÀàÖÇÄÜµÄÏµÍ³¡£AI¼¼Êõ°üÀ¨»úÆ÷Ñ§Ï°¡¢Éî¶ÈÑ§Ï°¡¢×ÔÈ»ÓïÑÔ´¦ÀíµÈ¡£½üÄêÀ´£¬AIÔÚÒ½ÁÆÕï¶Ï¡¢×Ô¶¯¼İÊ»¡¢ÓïÒôÊ¶±ğµÈÁìÓòÈ¡µÃÁËÖØ´óÍ»ÆÆ¡£´óĞÍÓïÑÔÄ£ĞÍÈçGPT¡¢BERTµÈÕ¹Ê¾ÁËÇ¿´óµÄÎÄ±¾Àí½âºÍÉú³ÉÄÜÁ¦¡£",
+                "task": "summarize",
+            },
         },
         {
-            "title": "æƒ…æ„Ÿåˆ†æ",
+            "title": "Çé¸Ğ·ÖÎö",
             "data": {
-                "text": "è¿™ä¸ªäº§å“çœŸçš„å¤ªæ£’äº†ï¼ç•Œé¢è®¾è®¡éå¸¸äººæ€§åŒ–ï¼ŒåŠŸèƒ½å¼ºå¤§ä¸”æ˜“äºä½¿ç”¨ã€‚å®¢æœå“åº”ä¹Ÿå¾ˆåŠæ—¶ï¼Œè§£å†³äº†æˆ‘æ‰€æœ‰çš„é—®é¢˜ã€‚å¼ºçƒˆæ¨èç»™å¤§å®¶ï¼",
-                "task": "sentiment"
-            }
+                "text": "Õâ¸ö²úÆ·ÕæµÄÌ«°ôÁË£¡½çÃæÉè¼Æ·Ç³£ÈËĞÔ»¯£¬¹¦ÄÜÇ¿´óÇÒÒ×ÓÚÊ¹ÓÃ¡£¿Í·şÏìÓ¦Ò²ºÜ¼°Ê±£¬½â¾öÁËÎÒËùÓĞµÄÎÊÌâ¡£Ç¿ÁÒÍÆ¼ö¸ø´ó¼Ò£¡",
+                "task": "sentiment",
+            },
         },
         {
-            "title": "å…³é”®è¯æå–",
+            "title": "¹Ø¼ü´ÊÌáÈ¡",
             "data": {
-                "text": "åŒºå—é“¾æ˜¯ä¸€ç§åˆ†å¸ƒå¼è´¦æœ¬æŠ€æœ¯ï¼Œé€šè¿‡å¯†ç å­¦æ–¹æ³•ç¡®ä¿æ•°æ®çš„å®‰å…¨æ€§å’Œä¸å¯ç¯¡æ”¹æ€§ã€‚æ¯”ç‰¹å¸æ˜¯ç¬¬ä¸€ä¸ªæˆåŠŸåº”ç”¨åŒºå—é“¾æŠ€æœ¯çš„åŠ å¯†è´§å¸ã€‚æ™ºèƒ½åˆçº¦å…è®¸åœ¨åŒºå—é“¾ä¸Šæ‰§è¡Œè‡ªåŠ¨åŒ–çš„åè®®ã€‚",
-                "task": "keywords"
-            }
-        }
+                "text": "Çø¿éÁ´ÊÇÒ»ÖÖ·Ö²¼Ê½ÕË±¾¼¼Êõ£¬Í¨¹ıÃÜÂëÑ§·½·¨È·±£Êı¾İµÄ°²È«ĞÔºÍ²»¿É´Û¸ÄĞÔ¡£±ÈÌØ±ÒÊÇµÚÒ»¸ö³É¹¦Ó¦ÓÃÇø¿éÁ´¼¼ÊõµÄ¼ÓÃÜ»õ±Ò¡£ÖÇÄÜºÏÔ¼ÔÊĞíÔÚÇø¿éÁ´ÉÏÖ´ĞĞ×Ô¶¯»¯µÄĞ­Òé¡£",
+                "task": "keywords",
+            },
+        },
     ]
-    
+
     for case in test_cases:
-        response = requests.post(
-            f"{BASE_URL}/text/analyze",
-            json=case["data"]
-        )
+        response = await client.post("/text/analyze", json=case["data"])
         if response.status_code == 200:
-            print_result(f"æ–‡æœ¬åˆ†æ - {case['title']}", response.json())
+            print_result(f"ÎÄ±¾·ÖÎö - {case['title']}", response.json())
         else:
-            print(f"âŒ {case['title']}å¤±è´¥: {response.status_code}")
+            print(f" {case['title']}Ê§°Ü: {response.status_code}")
 
 
-def test_code_assist():
-    """æµ‹è¯•ä»£ç è¾…åŠ©åŠŸèƒ½"""
-    test_cases = [
+async def test_code_assist(client: httpx.AsyncClient) -> None:
+    test_cases: List[Dict[str, Any]] = [
         {
-            "title": "ä»£ç ç”Ÿæˆ",
+            "title": "´úÂëÉú³É",
             "data": {
                 "task": "generate",
                 "language": "Python",
-                "requirements": "å®ç°ä¸€ä¸ªäºŒåˆ†æŸ¥æ‰¾ç®—æ³•"
-            }
+                "requirements": "ÊµÏÖÒ»¸ö¶ş·Ö²éÕÒËã·¨",
+            },
         },
         {
-            "title": "ä»£ç å®¡æŸ¥",
+            "title": "´úÂëÉó²é",
             "data": {
                 "code": """
 def calculate_sum(numbers):
@@ -110,11 +102,11 @@ def calculate_sum(numbers):
     return total
                 """,
                 "task": "review",
-                "language": "Python"
-            }
+                "language": "Python",
+            },
         },
         {
-            "title": "ä»£ç ä¼˜åŒ–",
+            "title": "´úÂëÓÅ»¯",
             "data": {
                 "code": """
 def find_duplicates(lst):
@@ -126,137 +118,123 @@ def find_duplicates(lst):
     return duplicates
                 """,
                 "task": "optimize",
-                "language": "Python"
-            }
-        }
+                "language": "Python",
+            },
+        },
     ]
-    
+
     for case in test_cases:
-        response = requests.post(
-            f"{BASE_URL}/code",
-            json=case["data"]
-        )
+        response = await client.post("/code", json=case["data"])
         if response.status_code == 200:
-            print_result(f"ä»£ç è¾…åŠ© - {case['title']}", response.json())
+            print_result(f"´úÂë¸¨Öú - {case['title']}", response.json())
         else:
-            print(f"âŒ {case['title']}å¤±è´¥: {response.status_code}")
+            print(f" {case['title']}Ê§°Ü: {response.status_code}")
 
 
-def test_chat():
-    """æµ‹è¯•å¯¹è¯åŠŸèƒ½"""
-    print("\nğŸ’¬ æµ‹è¯•å¯¹è¯åŠŸèƒ½...")
-    
+async def test_chat(client: httpx.AsyncClient) -> None:
+    print("\n ²âÊÔ¶Ô»°¹¦ÄÜ...")
     data = {
         "messages": [
-            {"role": "user", "content": "ä»€ä¹ˆæ˜¯é‡å­è®¡ç®—ï¼Ÿ"},
-            {"role": "assistant", "content": "é‡å­è®¡ç®—æ˜¯ä¸€ç§åŸºäºé‡å­åŠ›å­¦åŸç†çš„è®¡ç®—æ–¹å¼ã€‚"},
-            {"role": "user", "content": "å®ƒä¸ä¼ ç»Ÿè®¡ç®—æœ‰ä»€ä¹ˆåŒºåˆ«ï¼Ÿ"}
+            {"role": "user", "content": "Ê²Ã´ÊÇÁ¿×Ó¼ÆËã£¿"},
+            {"role": "assistant", "content": "Á¿×Ó¼ÆËãÊÇÒ»ÖÖ»ùÓÚÁ¿×ÓÁ¦Ñ§Ô­ÀíµÄ¼ÆËã·½Ê½¡£"},
+            {"role": "user", "content": "ËüÓë´«Í³¼ÆËãÓĞÊ²Ã´Çø±ğ£¿"},
         ],
-        "system_prompt": "ä½ æ˜¯ä¸€ä¸ªä¸“ä¸šçš„ç§‘æŠ€é¡¾é—®ï¼Œç”¨ç®€å•æ˜“æ‡‚çš„è¯­è¨€è§£é‡Šå¤æ‚æ¦‚å¿µã€‚"
+        "system_prompt": "ÄãÊÇÒ»¸ö×¨ÒµµÄ¿Æ¼¼¹ËÎÊ£¬ÓÃ¼òµ¥Ò×¶®µÄÓïÑÔ½âÊÍ¸´ÔÓ¸ÅÄî¡£",
     }
-    
-    response = requests.post(f"{BASE_URL}/chat", json=data)
+
+    response = await client.post("/chat", json=data)
     if response.status_code == 200:
-        print_result("å¤šè½®å¯¹è¯", response.json())
+        print_result("¶àÂÖ¶Ô»°", response.json())
     else:
-        print(f"âŒ å¯¹è¯å¤±è´¥: {response.status_code}")
+        print(f" ¶Ô»°Ê§°Ü: {response.status_code}")
 
 
-def test_quick_ai():
-    """æµ‹è¯•å¿«é€ŸAIè°ƒç”¨"""
-    print("\nâš¡ æµ‹è¯•å¿«é€ŸAIè°ƒç”¨...")
-    
+async def test_quick_ai(client: httpx.AsyncClient) -> None:
+    print("\n ²âÊÔ¿ìËÙAIµ÷ÓÃ...")
     data = {
-        "prompt": "ç”¨ä¸‰å¥è¯ä»‹ç»Pythonç¼–ç¨‹è¯­è¨€çš„ç‰¹ç‚¹"
+        "prompt": "ÓÃÈı¾ä»°½éÉÜPython±à³ÌÓïÑÔµÄÌØµã",
     }
-    
-    response = requests.post(
-        f"{BASE_URL}/quick",
-        json=data,
-        headers=HEADERS
-    )
+
+    response = await client.post("/quick", json=data)
     if response.status_code == 200:
-        print_result("å¿«é€ŸAIè°ƒç”¨", response.json())
+        print_result("¿ìËÙAIµ÷ÓÃ", response.json())
     else:
-        print(f"âŒ å¿«é€Ÿè°ƒç”¨å¤±è´¥: {response.status_code}")
+        print(f" ¿ìËÙµ÷ÓÃÊ§°Ü: {response.status_code}")
 
 
-def test_batch_process():
-    """æµ‹è¯•æ‰¹é‡å¤„ç†"""
-    print("\nğŸ“¦ æµ‹è¯•æ‰¹é‡å¤„ç†...")
-    
+async def test_batch_process(client: httpx.AsyncClient) -> None:
+    print("\n ²âÊÔÅúÁ¿´¦Àí...")
     tasks = [
         {
             "id": "task1",
             "type": "text",
-            "text": "æœºå™¨å­¦ä¹ æ˜¯äººå·¥æ™ºèƒ½çš„ä¸€ä¸ªé‡è¦åˆ†æ”¯ã€‚",
-            "task": "translate"
+            "text": "»úÆ÷Ñ§Ï°ÊÇÈË¹¤ÖÇÄÜµÄÒ»¸öÖØÒª·ÖÖ§¡£",
+            "task": "translate",
         },
         {
             "id": "task2",
             "type": "code",
             "code": "print('Hello World')",
             "task": "explain",
-            "language": "Python"
+            "language": "Python",
         },
         {
             "id": "task3",
             "type": "text",
-            "text": "ä»Šå¤©å¤©æ°”çœŸå¥½ï¼Œé€‚åˆå‡ºå»æ•£æ­¥ã€‚",
-            "task": "sentiment"
-        }
+            "text": "½ñÌìÌìÆøÕæºÃ£¬ÊÊºÏ³öÈ¥É¢²½¡£",
+            "task": "sentiment",
+        },
     ]
-    
-    response = requests.post(f"{BASE_URL}/batch", json={"tasks": tasks})
+
+    response = await client.post("/batch", json={"tasks": tasks})
     if response.status_code == 200:
         results = response.json()
-        print(f"âœ… æ‰¹é‡å¤„ç†å®Œæˆï¼Œå…±å¤„ç† {len(results['results'])} ä¸ªä»»åŠ¡")
+        print(f" ÅúÁ¿´¦ÀíÍê³É£¬¹²´¦Àí {len(results['results'])} ¸öÈÎÎñ")
         for result in results["results"]:
-            print(f"  - ä»»åŠ¡ {result['task_id']}: {'æˆåŠŸ' if result.get('result', {}).get('success') else 'å¤±è´¥'}")
+            success = result.get("result", {}).get("success")
+            print(f"  - ÈÎÎñ {result['task_id']}: {'³É¹¦' if success else 'Ê§°Ü'}")
     else:
-        print(f"âŒ æ‰¹é‡å¤„ç†å¤±è´¥: {response.status_code}")
+        print(f" ÅúÁ¿´¦ÀíÊ§°Ü: {response.status_code}")
 
 
-def test_health_check():
-    """æµ‹è¯•å¥åº·æ£€æŸ¥"""
-    print("\nâ¤ï¸ æµ‹è¯•å¥åº·æ£€æŸ¥...")
-    response = requests.get(f"{BASE_URL}/health")
+async def test_health_check(client: httpx.AsyncClient) -> bool:
+    print("\n ²âÊÔ½¡¿µ¼ì²é...")
+    response = await client.get("/health")
     if response.status_code == 200:
         data = response.json()
-        print(f"âœ… æœåŠ¡çŠ¶æ€: {data['status']}")
-        print(f"æœåŠ¡åç§°: {data['service']}")
-        print(f"æ¨¡å‹å¯ç”¨: {data['models_available']}")
+        print(f" ·şÎñ×´Ì¬: {data['status']}")
+        print(f"·şÎñÃû³Æ: {data['service']}")
+        print(f"Ä£ĞÍ¿ÉÓÃ: {data['models_available']}")
         return True
     else:
-        print(f"âŒ å¥åº·æ£€æŸ¥å¤±è´¥: {response.status_code}")
+        print(f" ½¡¿µ¼ì²éÊ§°Ü: {response.status_code}")
         return False
 
 
-def main():
-    """ä¸»æµ‹è¯•å‡½æ•°"""
-    print("ğŸš€ å¼€å§‹æµ‹è¯•çº¯AIæœåŠ¡")
+async def main() -> None:
+    print(" ¿ªÊ¼²âÊÔ´¿AI·şÎñ")
     print("=" * 60)
-    print(f"æœåŠ¡åœ°å€: {BASE_URL}")
+    print(f"·şÎñµØÖ·: {BASE_URL}")
     print("=" * 60)
-    
-    # æµ‹è¯•å¥åº·æ£€æŸ¥
-    if not test_health_check():
-        print("\nâš ï¸ æœåŠ¡å¯èƒ½æœªå¯åŠ¨ï¼Œè¯·å…ˆå¯åŠ¨æœåŠ¡ï¼š")
-        print("python main.py æˆ– uvicorn main:app --reload")
-        return
-    
-    # æµ‹è¯•å„é¡¹åŠŸèƒ½
-    test_list_models()
-    test_text_analysis()
-    test_code_assist()
-    test_chat()
-    test_quick_ai()
-    test_batch_process()
-    
+
+    timeout = httpx.Timeout(30.0)
+    async with httpx.AsyncClient(base_url=BASE_URL, headers=DEFAULT_HEADERS, timeout=timeout) as client:
+        if not await test_health_check(client):
+            print("\n ·şÎñ¿ÉÄÜÎ´Æô¶¯£¬ÇëÏÈÆô¶¯·şÎñ£º")
+            print("python main.py »ò uvicorn main:app --reload")
+            return
+
+        await test_list_models(client)
+        await test_text_analysis(client)
+        await test_code_assist(client)
+        await test_chat(client)
+        await test_quick_ai(client)
+        await test_batch_process(client)
+
     print("\n" + "=" * 60)
-    print("âœ… æ‰€æœ‰æµ‹è¯•å®Œæˆï¼")
+    print(" ËùÓĞ²âÊÔÍê³É£¡")
     print("=" * 60)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

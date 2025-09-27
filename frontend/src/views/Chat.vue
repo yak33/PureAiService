@@ -116,12 +116,30 @@
 <script>
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { DocumentCopy } from '@element-plus/icons-vue'
+import {
+  DocumentCopy,
+  Delete,
+  User,
+  Robot,
+  ChatDotRound
+} from '@element-plus/icons-vue'
 
 export default {
   name: 'Chat',
+  computed: {
+    DocumentCopy() {
+      return DocumentCopy
+    },
+    Delete() {
+      return Delete
+    }
+  },
   components: {
-    DocumentCopy
+    DocumentCopy,
+    Delete,
+    User,
+    Robot,
+    ChatDotRound
   },
   data() {
     return {
