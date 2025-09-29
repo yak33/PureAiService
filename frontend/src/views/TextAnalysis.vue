@@ -105,7 +105,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import { aiService } from '../services/api'
 import { message } from 'ant-design-vue'
 import { CopyOutlined, HighlightOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 
@@ -148,7 +148,7 @@ export default {
           custom_prompt: this.form.customPrompt || undefined
         }
 
-        const response = await axios.post('/api/v1/ai/text/analyze', requestData)
+        const response = await aiService.analyzeText(requestData)
 
         if (response.data.success) {
           this.result = response.data
@@ -222,7 +222,7 @@ export default {
   border: 1px solid #e9ecef;
   border-radius: 6px;
   padding: 16px;
-  max-height: 400px;
+  max-height: 600px;
   overflow-y: auto;
 }
 

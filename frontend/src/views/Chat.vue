@@ -131,7 +131,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import { aiService } from '../services/api'
 import { message } from 'ant-design-vue'
 import {
   DeleteOutlined,
@@ -204,7 +204,7 @@ export default {
           stream: false
         }
 
-        const response = await axios.post('/api/v1/ai/chat', requestData)
+        const response = await aiService.chat(requestData)
 
         if (response.data.success) {
           const assistantMessage = {

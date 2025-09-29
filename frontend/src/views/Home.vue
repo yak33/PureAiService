@@ -111,7 +111,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import { aiService } from '../services/api'
 import {
   FileTextOutlined,
   CodeOutlined,
@@ -143,10 +143,12 @@ export default {
   methods: {
     async checkServiceStatus() {
       try {
-        const response = await axios.get('/api/v1/ai/health')
-        this.isOnline = response.data.status === 'healthy'
-        
-        const modelsResponse = await axios.get('/api/v1/ai/models')
+        const [healthResponse, modelsResponse] = await Promise.all([
+          aiService.healthCheck(),
+          aiService.getModels()
+        ])
+
+        this.isOnline = healthResponse.data.status === 'healthy'
         this.modelCount = modelsResponse.data.models.length
       } catch (error) {
         console.error('检查服务状态失败:', error)

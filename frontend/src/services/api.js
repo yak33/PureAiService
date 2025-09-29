@@ -28,10 +28,16 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
-    console.error('响应错误:', error.response?.status, error.response?.data)
+    console.error(
+      '响应错误:',
+      error.response?.status,
+      error.response?.data || error.message
+    )
     return Promise.reject(error)
   }
 )
+
+export const extractData = (response) => response?.data
 
 // AI服务API
 export const aiService = {

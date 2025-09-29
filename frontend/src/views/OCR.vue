@@ -123,7 +123,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import { aiService } from '../services/api'
 import { message } from 'ant-design-vue'
 import {
   UploadOutlined,
@@ -197,11 +197,7 @@ export default {
         formData.append('language', this.form.language)
         formData.append('detail_level', this.form.detailLevel)
 
-        const response = await axios.post('/api/v1/ai/ocr', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        })
+        const response = await aiService.ocr(formData)
 
         this.processingTime = Date.now() - startTime
 

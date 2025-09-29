@@ -183,7 +183,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import { aiService } from '../services/api'
 import { message } from 'ant-design-vue'
 import {
   HighlightOutlined,
@@ -251,7 +251,7 @@ export default {
           n: this.form.n
         }
 
-        const response = await axios.post('/api/v1/ai/image/describe', requestData)
+        const response = await aiService.generateImageDescription(requestData)
 
         if (response.data.success) {
           this.results = response.data.descriptions

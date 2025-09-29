@@ -127,7 +127,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import { aiService } from '../services/api'
 import { message } from 'ant-design-vue'
 import {
   ToolOutlined,
@@ -205,7 +205,7 @@ export default {
           code: this.form.task !== 'generate' ? this.form.code : undefined
         }
 
-        const response = await axios.post('/api/v1/ai/code', requestData)
+        const response = await aiService.codeAssist(requestData)
 
         if (response.data.success) {
           this.result = response.data
