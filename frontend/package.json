@@ -13,12 +13,15 @@
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
     "install:deps": "pnpm install",
-    "clean": "pnpm store prune"
+    "clean": "pnpm store prune",
+    "clean:modules": "node -e \"require('fs').rmSync('node_modules',{recursive:true,force:true});\"",
+    "clean:lock": "node -e \"require('fs').rmSync('pnpm-lock.yaml',{force:true});\"",
+    "reset": "pnpm run clean:modules && pnpm run clean:lock && pnpm install"
   },
   "dependencies": {
-    "@element-plus/icons-vue": "^2.1.0",
+    "@ant-design/icons-vue": "^7.0.1",
+    "ant-design-vue": "^4.2.6",
     "axios": "^1.6.0",
-    "element-plus": "^2.4.0",
     "vue": "^3.4.0",
     "vue-router": "^4.2.5"
   },

@@ -1,19 +1,26 @@
 <template>
   <div class="chat">
-    <el-card class="chat-card">
-      <template #header>
+    <a-card class="chat-card">
+      <template #title>
         <div class="card-header">
           <span>💬 智能对话</span>
           <div class="header-controls">
-            <el-select v-model="currentModel" size="small" style="width: 200px;">
-              <el-option label="GLM-4.5 (推荐)" value="zai-org/GLM-4.5" />
-              <el-option label="Kimi-K2" value="moonshotai/Kimi-K2-Instruct-0905" />
-            </el-select>
-            <el-button size="small" @click="clearChat" :icon="Delete">清空对话</el-button>
+            <a-select
+              v-model:value="currentModel"
+              size="small"
+              style="width: 200px"
+            >
+              <a-select-option value="zai-org/GLM-4.5">GLM-4.5 (推荐)</a-select-option>
+              <a-select-option value="moonshotai/Kimi-K2-Instruct-0905">Kimi-K2</a-select-option>
+            </a-select>
+            <a-button size="small" @click="clearChat">
+              <DeleteOutlined />
+              <span>清空对话</span>
+            </a-button>
           </div>
         </div>
       </template>
-      
+
       <div class="chat-container">
         <div class="messages-container" ref="messagesContainer">
           <div
@@ -22,12 +29,8 @@
             :class="['message', message.role === 'user' ? 'user-message' : 'assistant-message']"
           >
             <div class="message-avatar">
-              <el-icon v-if="message.role === 'user'" size="20">
-                <User />
-              </el-icon>
-              <el-icon v-else size="20">
-                <Robot />
-              </el-icon>
+              <UserOutlined v-if="message.role === 'user'" />
+              <RobotOutlined v-else />
             </div>
             <div class="message-content">
               <div class="message-text">
@@ -38,20 +41,15 @@
               </div>
             </div>
             <div class="message-actions" v-if="message.role === 'assistant'">
-              <el-button
-                type="text"
-                size="small"
-                @click="copyMessage(message.content)"
-                :icon="DocumentCopy"
-              />
+              <a-button type="link" size="small" @click="copyMessage(message.content)">
+                <CopyOutlined />
+              </a-button>
             </div>
           </div>
-          
+
           <div v-if="loading" class="message assistant-message">
             <div class="message-avatar">
-              <el-icon size="20">
-                <Robot />
-              </el-icon>
+              <RobotOutlined />
             </div>
             <div class="message-content">
               <div class="typing-indicator">
@@ -62,84 +60,97 @@
             </div>
           </div>
         </div>
-        
+
         <div class="input-container">
-          <el-collapse v-model="showAdvanced" class="advanced-settings">
-            <el-collapse-item title="高级设置" name="1">
-              <el-form :model="settings" label-width="120px" size="small">
-                <el-form-item label="系统提示词">
-                  <el-input
-                    v-model="settings.systemPrompt"
-                    type="textarea"
+          <a-collapse v-model:activeKey="showAdvanced" class="advanced-settings">
+            <a-collapse-panel key="1">
+              <template #header>
+                <div class="collapse-header">
+                  <SettingOutlined />
+                  <span>高级设置</span>
+                </div>
+              </template>
+
+              <a-form :model="settings" layout="vertical" size="small">
+                <a-form-item label="系统提示词">
+                  <a-textarea
+                    v-model:value="settings.systemPrompt"
                     :rows="2"
                     placeholder="可选：设置AI的角色和行为..."
+                    :auto-size="{ minRows: 2, maxRows: 6 }"
                   />
-                </el-form-item>
-                <el-form-item label="温度参数">
-                  <el-slider v-model="settings.temperature" :min="0" :max="1" :step="0.1" show-stops />
-                  <span class="slider-label">{{ settings.temperature }} ({{ getTemperatureLabel() }})</span>
-                </el-form-item>
-                <el-form-item label="最大Token">
-                  <el-input-number v-model="settings.maxTokens" :min="100" :max="4000" :step="100" />
-                </el-form-item>
-              </el-form>
-            </el-collapse-item>
-          </el-collapse>
-          
+                </a-form-item>
+                <a-form-item label="温度参数">
+                  <div class="slider-wrapper">
+                    <a-slider
+                      v-model:value="settings.temperature"
+                      :min="0"
+                      :max="1"
+                      :step="0.1"
+                    />
+                    <span class="slider-label">{{ settings.temperature }} ({{ getTemperatureLabel() }})</span>
+                  </div>
+                </a-form-item>
+                <a-form-item label="最大Token">
+                  <a-input-number
+                    v-model:value="settings.maxTokens"
+                    :min="100"
+                    :max="4000"
+                    :step="100"
+                  />
+                </a-form-item>
+              </a-form>
+            </a-collapse-panel>
+          </a-collapse>
+
           <div class="input-area">
-            <el-input
-              v-model="inputMessage"
-              type="textarea"
+            <a-textarea
+              v-model:value="inputMessage"
               :rows="3"
               placeholder="输入您的问题..."
+              :auto-size="{ minRows: 3, maxRows: 6 }"
               @keydown.ctrl.enter="sendMessage"
               :disabled="loading"
             />
             <div class="input-actions">
-              <el-button
+              <a-button
                 type="primary"
                 @click="sendMessage"
                 :loading="loading"
                 :disabled="!inputMessage.trim()"
               >
-                <el-icon><ChatDotRound /></el-icon>
-                发送 (Ctrl+Enter)
-              </el-button>
+                <SendOutlined />
+                <span>发送 (Ctrl+Enter)</span>
+              </a-button>
             </div>
           </div>
         </div>
       </div>
-    </el-card>
+    </a-card>
   </div>
 </template>
 
 <script>
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 import {
-  DocumentCopy,
-  Delete,
-  User,
-  Robot,
-  ChatDotRound
-} from '@element-plus/icons-vue'
+  DeleteOutlined,
+  CopyOutlined,
+  UserOutlined,
+  RobotOutlined,
+  SendOutlined,
+  SettingOutlined
+} from '@ant-design/icons-vue'
 
 export default {
   name: 'Chat',
-  computed: {
-    DocumentCopy() {
-      return DocumentCopy
-    },
-    Delete() {
-      return Delete
-    }
-  },
   components: {
-    DocumentCopy,
-    Delete,
-    User,
-    Robot,
-    ChatDotRound
+    DeleteOutlined,
+    CopyOutlined,
+    UserOutlined,
+    RobotOutlined,
+    SendOutlined,
+    SettingOutlined
   },
   data() {
     return {
@@ -161,21 +172,21 @@ export default {
   methods: {
     async sendMessage() {
       if (!this.inputMessage.trim() || this.loading) return
-      
+
       const userMessage = {
         role: 'user',
         content: this.inputMessage.trim(),
         timestamp: new Date()
       }
-      
+
       this.messages.push(userMessage)
       this.inputMessage = ''
       this.loading = true
-      
+
       this.$nextTick(() => {
         this.scrollToBottom()
       })
-      
+
       try {
         const requestMessages = this.messages
           .filter(msg => msg.role !== 'system')
@@ -183,7 +194,7 @@ export default {
             role: msg.role,
             content: msg.content
           }))
-        
+
         const requestData = {
           messages: requestMessages,
           model: this.currentModel,
@@ -192,9 +203,9 @@ export default {
           max_tokens: this.settings.maxTokens,
           stream: false
         }
-        
+
         const response = await axios.post('/api/v1/ai/chat', requestData)
-        
+
         if (response.data.success) {
           const assistantMessage = {
             role: 'assistant',
@@ -203,62 +214,62 @@ export default {
             model: response.data.model,
             usage: response.data.usage
           }
-          
+
           this.messages.push(assistantMessage)
           this.saveChatHistory()
-          
+
           this.$nextTick(() => {
             this.scrollToBottom()
           })
         } else {
-          ElMessage.error(response.data.error || '对话失败')
-          this.messages.pop() // 移除用户消息
+          message.error(response.data.error || '对话失败')
+          this.messages.pop()
         }
       } catch (error) {
         console.error('对话请求失败:', error)
-        ElMessage.error(error.response?.data?.detail || '网络请求失败')
-        this.messages.pop() // 移除用户消息
+        message.error(error.response?.data?.detail || '网络请求失败')
+        this.messages.pop()
       } finally {
         this.loading = false
       }
     },
-    
+
     clearChat() {
       this.messages = []
       this.saveChatHistory()
-      ElMessage.success('对话已清空')
+      message.success('对话已清空')
     },
-    
+
     async copyMessage(content) {
       try {
         await navigator.clipboard.writeText(content)
-        ElMessage.success('消息已复制到剪贴板')
+        message.success('消息已复制到剪贴板')
       } catch (error) {
         console.error('复制失败:', error)
-        ElMessage.error('复制失败')
+        message.error('复制失败')
       }
     },
-    
+
     formatTime(timestamp) {
       return new Date(timestamp).toLocaleTimeString('zh-CN', {
         hour: '2-digit',
         minute: '2-digit'
       })
     },
-    
+
     getTemperatureLabel() {
       if (this.settings.temperature <= 0.3) return '保守'
       if (this.settings.temperature <= 0.7) return '平衡'
       return '创意'
     },
-    
+
     scrollToBottom() {
       const container = this.$refs.messagesContainer
       if (container) {
         container.scrollTop = container.scrollHeight
       }
     },
-    
+
     saveChatHistory() {
       try {
         localStorage.setItem('ai-chat-history', JSON.stringify(this.messages))
@@ -266,7 +277,7 @@ export default {
         console.error('保存聊天记录失败:', error)
       }
     },
-    
+
     loadChatHistory() {
       try {
         const history = localStorage.getItem('ai-chat-history')
@@ -292,7 +303,7 @@ export default {
 }
 
 .chat-card {
-  height: calc(100vh - 200px);
+  min-height: calc(100vh - 200px);
   display: flex;
   flex-direction: column;
 }
@@ -301,6 +312,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
 }
 
 .header-controls {
@@ -333,8 +345,8 @@ export default {
 }
 
 .user-message .message-content {
-  background-color: #409EFF;
-  color: white;
+  background-color: #1677ff;
+  color: #fff;
   margin-right: 12px;
 }
 
@@ -353,16 +365,17 @@ export default {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 20px;
 }
 
 .user-message .message-avatar {
-  background-color: #409EFF;
-  color: white;
+  background-color: #1677ff;
+  color: #fff;
 }
 
 .assistant-message .message-avatar {
-  background-color: #67C23A;
-  color: white;
+  background-color: #52c41a;
+  color: #fff;
 }
 
 .message-content {
@@ -388,7 +401,6 @@ export default {
 .message-actions {
   margin-left: 8px;
   display: flex;
-  flex-direction: column;
 }
 
 .typing-indicator {
@@ -430,8 +442,19 @@ export default {
   margin-bottom: 16px;
 }
 
+.collapse-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .slider-label {
-  margin-left: 12px;
   font-size: 12px;
   color: #666;
 }
@@ -447,7 +470,7 @@ export default {
   justify-content: flex-end;
 }
 
-:deep(.el-card__body) {
+:deep(.ant-card-body) {
   height: 100%;
   display: flex;
   flex-direction: column;

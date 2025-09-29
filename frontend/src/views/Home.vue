@@ -1,85 +1,85 @@
 <template>
   <div class="home">
-    <el-row :gutter="20">
-      <el-col :span="24">
+    <a-row :gutter="20">
+      <a-col :span="24">
         <div class="welcome-section">
           <h1>欢迎使用AI服务平台</h1>
           <p>基于大模型API的纯AI服务，提供文本分析、代码助手、智能对话等功能</p>
         </div>
-      </el-col>
-    </el-row>
+      </a-col>
+    </a-row>
 
-    <el-row :gutter="20" class="feature-cards">
-      <el-col :span="8">
-        <el-card class="feature-card" @click="$router.push('/text')">
+    <a-row :gutter="20" class="feature-cards">
+      <a-col :span="8">
+        <a-card class="feature-card" @click="$router.push('/text')" hoverable>
           <div class="card-content">
-            <el-icon size="48" color="#409EFF"><Document /></el-icon>
+            <FileTextOutlined class="feature-icon" style="color: #1677ff;" />
             <h3>文本分析</h3>
             <p>支持文本摘要、情感分析、关键词提取、翻译等多种分析任务</p>
           </div>
-        </el-card>
-      </el-col>
-      
-      <el-col :span="8">
-        <el-card class="feature-card" @click="$router.push('/code')">
+        </a-card>
+      </a-col>
+
+      <a-col :span="8">
+        <a-card class="feature-card" @click="$router.push('/code')" hoverable>
           <div class="card-content">
-            <el-icon size="48" color="#67C23A"><Cpu /></el-icon>
+            <CodeOutlined class="feature-icon" style="color: #52c41a;" />
             <h3>代码助手</h3>
             <p>代码审查、优化建议、错误调试、代码生成和解释</p>
           </div>
-        </el-card>
-      </el-col>
-      
-      <el-col :span="8">
-        <el-card class="feature-card" @click="$router.push('/chat')">
+        </a-card>
+      </a-col>
+
+      <a-col :span="8">
+        <a-card class="feature-card" @click="$router.push('/chat')" hoverable>
           <div class="card-content">
-            <el-icon size="48" color="#E6A23C"><ChatDotRound /></el-icon>
+            <MessageOutlined class="feature-icon" style="color: #faad14;" />
             <h3>智能对话</h3>
             <p>多轮对话交互，支持自定义系统提示词和多种AI模型</p>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        </a-card>
+      </a-col>
+    </a-row>
 
-    <el-row :gutter="20" class="feature-cards">
-      <el-col :span="8">
-        <el-card class="feature-card" @click="$router.push('/ocr')">
+    <a-row :gutter="20" class="feature-cards">
+      <a-col :span="8">
+        <a-card class="feature-card" @click="$router.push('/ocr')" hoverable>
           <div class="card-content">
-            <el-icon size="48" color="#F56C6C"><Camera /></el-icon>
+            <CameraOutlined class="feature-icon" style="color: #f5222d;" />
             <h3>文字识别</h3>
             <p>通过视觉模型识别图片中的文字，支持多语言和不同精度</p>
           </div>
-        </el-card>
-      </el-col>
-      
-      <el-col :span="8">
-        <el-card class="feature-card" @click="$router.push('/image')">
+        </a-card>
+      </a-col>
+
+      <a-col :span="8">
+        <a-card class="feature-card" @click="$router.push('/image')" hoverable>
           <div class="card-content">
-            <el-icon size="48" color="#909399"><Picture /></el-icon>
+            <PictureOutlined class="feature-icon" style="color: #909399;" />
             <h3>图像描述</h3>
             <p>生成详细的图像描述，可用于图像生成和内容创作</p>
           </div>
-        </el-card>
-      </el-col>
-      
-      <el-col :span="8">
-        <el-card class="stats-card">
+        </a-card>
+      </a-col>
+
+      <a-col :span="24" :md="8">
+        <a-card class="stats-card">
           <div class="card-content">
-            <el-icon size="48" color="#409EFF"><DataAnalysis /></el-icon>
+            <BarChartOutlined class="feature-icon" style="color: #1677ff;" />
             <h3>服务统计</h3>
             <div class="stats">
               <p>可用模型: <strong>{{ modelCount }}</strong></p>
               <p>服务状态: <strong :class="{'online': isOnline, 'offline': !isOnline}">{{ isOnline ? '在线' : '离线' }}</strong></p>
             </div>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        </a-card>
+      </a-col>
+    </a-row>
 
-    <el-row :gutter="20" class="info-section">
-      <el-col :span="12">
-        <el-card>
-          <template #header>
+    <a-row :gutter="20" class="info-section">
+      <a-col :span="24" :md="12">
+        <a-card>
+          <template #title>
             <span>🌟 特性介绍</span>
           </template>
           <ul>
@@ -89,12 +89,12 @@
             <li><strong>RESTful API</strong>: 标准化接口设计</li>
             <li><strong>免费使用</strong>: 基于免费的AI模型服务</li>
           </ul>
-        </el-card>
-      </el-col>
-      
-      <el-col :span="12">
-        <el-card>
-          <template #header>
+        </a-card>
+      </a-col>
+
+      <a-col :span="24" :md="12">
+        <a-card>
+          <template #title>
             <span>📚 使用说明</span>
           </template>
           <ol>
@@ -104,17 +104,33 @@
             <li>点击处理获取AI分析结果</li>
             <li>查看和复制处理结果</li>
           </ol>
-        </el-card>
-      </el-col>
-    </el-row>
+        </a-card>
+      </a-col>
+    </a-row>
   </div>
 </template>
 
 <script>
 import axios from 'axios'
+import {
+  FileTextOutlined,
+  CodeOutlined,
+  MessageOutlined,
+  CameraOutlined,
+  PictureOutlined,
+  BarChartOutlined
+} from '@ant-design/icons-vue'
 
 export default {
   name: 'Home',
+  components: {
+    FileTextOutlined,
+    CodeOutlined,
+    MessageOutlined,
+    CameraOutlined,
+    PictureOutlined,
+    BarChartOutlined
+  },
   data() {
     return {
       modelCount: 0,
@@ -151,44 +167,54 @@ export default {
 .welcome-section {
   text-align: center;
   margin-bottom: 40px;
-  padding: 40px 20px;
-  background: linear-gradient(135deg, #0f0f0f 0%, #1e1e1e 50%, #0a0a0a 100%);
-  color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 0 20px rgba(30, 30, 30, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 48px 32px;
+  background: linear-gradient(135deg, #f4f9ff 0%, #e8f1ff 45%, #fef6ff 100%);
+  color: #1f2937;
+  border-radius: 18px;
+  box-shadow:
+    0 20px 40px rgba(79, 114, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   position: relative;
   overflow: hidden;
 }
 
-.welcome-section::before {
+.welcome-section::before,
+.welcome-section::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
-  animation: shimmer 3s infinite;
+  border-radius: 50%;
+  opacity: 0.35;
+  pointer-events: none;
 }
 
-@keyframes shimmer {
-  0% { left: -100%; }
-  100% { left: 100%; }
+.welcome-section::before {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(79, 114, 255, 0.35) 0%, rgba(79, 114, 255, 0) 60%);
+  top: -120px;
+  right: -60px;
+}
+
+.welcome-section::after {
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(255, 166, 204, 0.35) 0%, rgba(255, 166, 204, 0) 60%);
+  bottom: -120px;
+  left: -80px;
 }
 
 .welcome-section h1 {
-  font-size: 2.5em;
-  margin-bottom: 16px;
-  font-weight: 300;
+  font-size: 2.6em;
+  margin-bottom: 18px;
+  font-weight: 600;
+  color: #1d1f2f;
 }
 
 .welcome-section p {
-  font-size: 1.2em;
-  opacity: 0.9;
+  font-size: 1.16em;
+  color: #4b5563;
+  max-width: 700px;
+  margin: 0 auto;
 }
 
 .feature-cards {
@@ -199,11 +225,6 @@ export default {
   cursor: pointer;
   transition: all 0.3s ease;
   height: 200px;
-}
-
-.feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
 
 .stats-card {
@@ -245,6 +266,10 @@ export default {
 
 .offline {
   color: #F56C6C;
+}
+
+.feature-icon {
+  font-size: 48px;
 }
 
 .info-section {
