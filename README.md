@@ -5,19 +5,24 @@
 ## 🌟 特性
 
 - **纯AI驱动**: 所有功能通过大模型API实现，无需第三方处理库
-- **多模型支持**: 支持硅基流动平台的AI模型（GLM和Kimi）
-- **功能丰富**: 文本分析、代码辅助、OCR识别、图像描述生成等
-- **现代化前端**: 基于Vue 3 + Element Plus的美观Web界面
+- **多模型支持**: 支持硅基流动平台的多种AI模型（GLM、Kimi、Qwen等）
+- **功能丰富**: 文本分析、代码辅助、智能对话、OCR识别、图像描述、**AI图片编辑**等
+- **现代化前端**: 基于 Vue 3 + Ant Design Vue 的美观Web界面
 - **简单易用**: RESTful API设计，易于集成
 - **高度可扩展**: 轻松添加新的AI功能
 - **极简架构**: 只保留必要的文件和依赖
 - **高可靠调用**: 后端使用异步 `httpx` 调用硅基流动 API，支持流式响应并强化错误处理
 
-## 🆕 最近更新
+## 🆕 最新功能 (2025-09-30)
 
-- **后端异步改造**：`app/services/pure_ai_service.py` 迁移至 `httpx.AsyncClient`，默认复用 `.env` 配置的超时与模型，增强流式解析与错误信息输出。
-- **安全日志**：新增鉴权头脱敏与错误详情提取逻辑，更便于排查问题同时避免泄露密钥。
-- **测试脚本升级**：`test_ai_service.py` 改写为异步版，统一通过 `httpx.AsyncClient` 调用后端接口，运行方式依旧为 `python test_ai_service.py`。
+- ✨ **AI图片编辑**: 集成 Qwen-Image-Edit-2509 模型，支持基于自然语言指令的智能图片编辑
+  - 背景更换、物体添加/移除
+  - 颜色调整、风格转换
+  - 迭代编辑、原图对比
+  - 快速指令模板
+- 🎨 **界面优化**: 统一采用左右布局设计，提升用户体验
+- 🔧 **后端异步改造**: 使用 `httpx.AsyncClient` 提升性能和可靠性
+- 🔒 **安全日志**: 鉴权头脱敏与错误详情提取，保护API密钥安全
 
 ## 🗂️ 项目结构
 
@@ -41,10 +46,18 @@ ai-service/
 │   │
 │   └── __init__.py
 │
-├── frontend/                  # 前端项目
+├── frontend/                  # 前端项目（Vue 3 + Ant Design Vue）
 │   ├── src/                  # 源代码
 │   │   ├── views/           # 页面组件
+│   │   │   ├── Home.vue            # 首页
+│   │   │   ├── TextAnalysis.vue    # 文本分析
+│   │   │   ├── CodeAssist.vue      # 代码助手
+│   │   │   ├── Chat.vue            # 智能对话
+│   │   │   ├── OCR.vue             # 文字识别
+│   │   │   ├── ImageDescription.vue # 图像描述
+│   │   │   └── ImageEdit.vue       # 图片编辑 ✨
 │   │   ├── services/        # API服务
+│   │   │   └── api.js              # API封装
 │   │   ├── App.vue          # 根组件
 │   │   └── main.js          # 入口文件
 │   ├── package.json         # 前端依赖
@@ -261,7 +274,21 @@ POST /api/v1/ai/batch
 }
 ```
 
-### 8. 获取模型列表
+### 8. 图片编辑 ✨ (新增)
+```python
+POST /api/v1/ai/image/edit
+FormData:
+- file: 图片文件
+- instruction: 编辑指令（自然语言描述）
+
+# 示例指令：
+# - "将背景改成海滩"
+# - "去掉图片中的文字"
+# - "改成黑白照片"
+# - "添加日落效果"
+```
+
+### 9. 获取模型列表
 ```python
 GET /api/v1/ai/models
 ```
@@ -277,11 +304,17 @@ python test_ai_service.py
 ## 📊 支持的模型
 
 ### 文本模型
-- **GLM-4.5**: 智谱AI对话模型（默认，免费）
-- **Kimi-K2**: Moonshot AI文本对话模型（免费）
+- **zai-org/GLM-4.5**: 智谱AI对话模型（默认，免费）
+- **moonshotai/Kimi-K2-Instruct-0905**: Moonshot AI文本对话模型（免费）
 
-### 视觉模型（用于OCR）
-- **GLM-4.5V**: 智谱AI视觉语言模型（免费）
+### 视觉模型
+- **zai-org/GLM-4.5V**: 智谱AI视觉语言模型，用于OCR识别（免费）
+
+### 图片编辑模型 ✨
+- **Qwen/Qwen-Image-Edit-2509**: 通义千问图片编辑模型（免费）
+  - 支持背景更换、物体添加/移除
+  - 支持颜色调整、风格转换
+  - 基于自然语言指令的智能编辑
 
 ## 💡 使用示例
 
@@ -318,6 +351,11 @@ curl -X POST http://localhost:8000/api/v1/ai/quick \
   -H "Content-Type: application/json" \
   -d '{"prompt": "解释什么是区块链"}'
 
+# 图片编辑 ✨
+curl -X POST http://localhost:8000/api/v1/ai/image/edit \
+  -F "file=@image.jpg" \
+  -F "instruction=将背景改成海滩"
+
 # 获取模型列表
 curl http://localhost:8000/api/v1/ai/models
 ```
@@ -328,13 +366,14 @@ curl http://localhost:8000/api/v1/ai/models
 2. **速率限制**: 免费模型有调用频率限制（通常10-20次/分钟）
 3. **Token限制**: 不同模型有不同的最大Token限制
 4. **费用**: 部分模型是收费的，请查看模型列表了解价格
+5. **图片编辑**: 编辑后的图片URL有效期为1小时，建议及时下载保存
 
 ## 📦 技术栈
 
 ### 后端依赖
 - **fastapi**: Web框架
 - **uvicorn[standard]**: ASGI服务器
-- **requests**: HTTP客户端
+- **httpx**: 异步HTTP客户端
 - **pydantic**: 数据验证
 - **python-dotenv**: 环境变量
 - **loguru**: 日志管理
@@ -343,11 +382,11 @@ curl http://localhost:8000/api/v1/ai/models
 
 ### 前端依赖
 - **Vue 3**: 渐进式JavaScript框架
-- **Element Plus**: Vue 3组件库
+- **Ant Design Vue**: Vue 3 组件库
 - **Vue Router**: 官方路由管理器
 - **Axios**: HTTP客户端
 - **Vite**: 现代化构建工具
-- **pnpm**: 快速、节省磁盘空间的包管理器
+- **npm/pnpm**: 包管理器
 
 ## 💡 设计理念
 
@@ -355,6 +394,7 @@ curl http://localhost:8000/api/v1/ai/models
 - **所有文档处理通过AI理解**而非解析库（无需PyPDF2、python-docx等）
 - **OCR通过视觉语言模型**而非tesseract
 - **代码分析通过代码模型**而非AST解析
+- **图片编辑通过AI模型**而非传统图像处理库（支持自然语言指令）
 - **充分利用大模型**的理解和生成能力
 
 ## 🔧 故障排除
