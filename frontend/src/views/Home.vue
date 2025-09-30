@@ -3,6 +3,9 @@
     <a-row :gutter="20">
       <a-col :span="24">
         <div class="welcome-section">
+          <div class="welcome-logo">
+            <Logo size="large" :show-text="false" />
+          </div>
           <h1>欢迎使用AI服务平台</h1>
           <p>基于大模型API的纯AI服务，提供文本分析、代码助手、智能对话等功能</p>
         </div>
@@ -98,9 +101,12 @@
 
     <a-row :gutter="20" class="info-section">
       <a-col :span="24" :md="12">
-        <a-card>
+        <a-card class="info-card">
           <template #title>
-            <span>🌟 特性介绍</span>
+            <div class="card-title">
+              <span class="title-icon">✨</span>
+              <span>特性介绍</span>
+            </div>
           </template>
           <ul>
             <li><strong>纯AI驱动</strong>: 所有功能通过大模型API实现</li>
@@ -113,9 +119,12 @@
       </a-col>
 
       <a-col :span="24" :md="12">
-        <a-card>
+        <a-card class="info-card">
           <template #title>
-            <span>📚 使用说明</span>
+            <div class="card-title">
+              <span class="title-icon">📖</span>
+              <span>使用说明</span>
+            </div>
           </template>
           <ol>
             <li>选择对应的功能模块</li>
@@ -142,6 +151,7 @@ import {
   ApiOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons-vue'
+import Logo from '../components/Logo.vue'
 
 export default {
   name: 'Home',
@@ -153,7 +163,8 @@ export default {
     PictureOutlined,
     EditOutlined,
     ApiOutlined,
-    ThunderboltOutlined
+    ThunderboltOutlined,
+    Logo
   },
   data() {
     return {
@@ -216,7 +227,7 @@ export default {
 .welcome-section {
   text-align: center;
   margin-bottom: 16px;
-  padding: 48px 32px;
+  padding: 60px 32px;
   background: linear-gradient(135deg, #f4f9ff 0%, #e8f1ff 45%, #fef6ff 100%);
   color: #1f2937;
   border-radius: 18px;
@@ -225,6 +236,23 @@ export default {
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.welcome-logo {
+  animation: float-gentle 4s ease-in-out infinite;
+}
+
+@keyframes float-gentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .welcome-section::before,
@@ -254,7 +282,7 @@ export default {
 
 .welcome-section h1 {
   font-size: 2.6em;
-  margin-bottom: 18px;
+  margin: 0;
   font-weight: 600;
   color: #1d1f2f;
 }
@@ -263,7 +291,7 @@ export default {
   font-size: 1.16em;
   color: #4b5563;
   max-width: 700px;
-  margin: 0 auto;
+  margin: 0;
 }
 
 .service-info-bar {
@@ -365,5 +393,25 @@ export default {
 .info-section li {
   margin: 8px 0;
   line-height: 1.6;
+}
+
+.info-card {
+  transition: all 0.3s ease;
+}
+
+.info-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.title-icon {
+  font-size: 18px;
 }
 </style>

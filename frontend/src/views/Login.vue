@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-box">
       <div class="login-header">
-        <h1>🤖 AI服务平台</h1>
+        <Logo size="large" />
         <p>请登录以继续使用服务</p>
       </div>
 
@@ -67,7 +67,10 @@
           还没有账号？
           <a @click="showRegisterModal = true">立即注册</a>
         </p>
-        <p class="tip">💡 默认管理员账号: admin / 123456</p>
+        <p class="tip">
+          <span class="tip-icon">💡</span>
+          默认管理员账号: admin / 123456
+        </p>
       </div>
     </div>
 
@@ -170,6 +173,7 @@ import { message } from 'ant-design-vue'
 import { UserOutlined, LockOutlined, SafetyOutlined, SmileOutlined } from '@ant-design/icons-vue'
 import { aiService } from '../services/api'
 import SliderCaptcha from '../components/SliderCaptcha.vue'
+import Logo from '../components/Logo.vue'
 
 export default {
   name: 'Login',
@@ -178,7 +182,8 @@ export default {
     LockOutlined,
     SafetyOutlined,
     SmileOutlined,
-    SliderCaptcha
+    SliderCaptcha,
+    Logo
   },
   data() {
     return {
@@ -383,17 +388,16 @@ export default {
 .login-header {
   text-align: center;
   margin-bottom: 40px;
-}
-
-.login-header h1 {
-  font-size: 28px;
-  margin-bottom: 8px;
-  color: #1f2937;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
 .login-header p {
   color: #6b7280;
   font-size: 14px;
+  margin: 0;
 }
 
 .login-form {
@@ -416,6 +420,14 @@ export default {
   color: #9ca3af;
   font-size: 12px;
   margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tip-icon {
+  font-size: 14px;
 }
 
 .login-footer a {

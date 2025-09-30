@@ -2,7 +2,9 @@
   <a-layout id="app" v-if="!isLoginPage">
     <a-layout-header class="layout-header">
       <div class="header-content">
-        <h1>🤖 AI服务平台</h1>
+        <div class="logo-wrapper">
+          <Logo size="small" />
+        </div>
         <a-menu
           mode="horizontal"
           :selectedKeys="selectedKeys"
@@ -41,7 +43,8 @@
         
         <div class="header-actions">
           <span class="welcome-text">
-            👋 欢迎你，
+            <span class="wave-emoji">👋</span>
+            欢迎你，
             <a class="nickname-link" @click="showProfileModal = true">{{ nickname }}</a>
           </span>
           <a-button type="link" @click="handleLogout" danger>
@@ -146,6 +149,7 @@ import {
   LogoutOutlined
 } from '@ant-design/icons-vue'
 import { aiService } from './services/api'
+import Logo from './components/Logo.vue'
 
 export default {
   name: 'App',
@@ -157,7 +161,8 @@ export default {
     CameraOutlined,
     PictureOutlined,
     EditOutlined,
-    LogoutOutlined
+    LogoutOutlined,
+    Logo
   },
   data() {
     return {
@@ -289,10 +294,9 @@ export default {
   height: 100%;
 }
 
-.header-content h1 {
-  color: #1677ff;
-  margin: 0;
-  font-size: 24px;
+.logo-wrapper {
+  display: flex;
+  align-items: center;
 }
 
 .header-actions {
@@ -305,6 +309,21 @@ export default {
 .welcome-text {
   color: #595959;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wave-emoji {
+  display: inline-block;
+  animation: wave 2s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  10%, 30% { transform: rotate(14deg); }
+  20% { transform: rotate(-8deg); }
+  40%, 100% { transform: rotate(0deg); }
 }
 
 .nickname-link {

@@ -1,0 +1,107 @@
+<template>
+  <div class="ai-logo-wrapper" :class="{ small: size === 'small', large: size === 'large' }">
+    <svg class="ai-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#f093fb;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#f5576c;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      
+      <!-- 外圆 -->
+      <circle cx="24" cy="24" r="22" fill="url(#grad1)" opacity="0.1"/>
+      <circle cx="24" cy="24" r="20" stroke="url(#grad1)" stroke-width="2" fill="none"/>
+      
+      <!-- AI核心 -->
+      <path d="M 24 8 L 30 14 L 30 22 L 24 28 L 18 22 L 18 14 Z" fill="url(#grad1)" opacity="0.8"/>
+      
+      <!-- 神经网络节点 -->
+      <circle cx="14" cy="18" r="3" fill="url(#grad2)"/>
+      <circle cx="34" cy="18" r="3" fill="url(#grad2)"/>
+      <circle cx="14" cy="30" r="3" fill="url(#grad2)"/>
+      <circle cx="34" cy="30" r="3" fill="url(#grad2)"/>
+      
+      <!-- 连接线 -->
+      <line x1="17" y1="19" x2="21" y2="20" stroke="url(#grad1)" stroke-width="1.5" opacity="0.6"/>
+      <line x1="31" y1="19" x2="27" y2="20" stroke="url(#grad1)" stroke-width="1.5" opacity="0.6"/>
+      <line x1="17" y1="29" x2="21" y2="26" stroke="url(#grad1)" stroke-width="1.5" opacity="0.6"/>
+      <line x1="31" y1="29" x2="27" y2="26" stroke="url(#grad1)" stroke-width="1.5" opacity="0.6"/>
+      
+      <!-- 中心点 -->
+      <circle cx="24" cy="24" r="4" fill="url(#grad2)"/>
+      <circle cx="24" cy="24" r="2" fill="white"/>
+    </svg>
+    <span v-if="showText" class="logo-text">AI服务平台</span>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'Logo',
+  props: {
+    size: {
+      type: String,
+      default: 'normal', // small, normal, large
+      validator: (value) => ['small', 'normal', 'large'].includes(value)
+    },
+    showText: {
+      type: Boolean,
+      default: true
+    }
+  }
+}
+</script>
+
+<style scoped>
+.ai-logo-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ai-logo {
+  width: 48px;
+  height: 48px;
+  animation: pulse 3s ease-in-out infinite;
+}
+
+.ai-logo-wrapper.small .ai-logo {
+  width: 32px;
+  height: 32px;
+}
+
+.ai-logo-wrapper.large .ai-logo {
+  width: 64px;
+  height: 64px;
+}
+
+.logo-text {
+  font-size: 24px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ai-logo-wrapper.small .logo-text {
+  font-size: 18px;
+}
+
+.ai-logo-wrapper.large .logo-text {
+  font-size: 32px;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+</style>
