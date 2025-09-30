@@ -7,6 +7,7 @@
 - **纯AI驱动**: 所有功能通过大模型API实现，无需第三方处理库
 - **多模型支持**: 支持硅基流动平台的多种AI模型（GLM、Kimi、Qwen等）
 - **功能丰富**: 文本分析、代码辅助、智能对话、OCR识别、图像描述、**AI图片编辑**等
+- **用户认证系统**: 完整的JWT认证、用户注册登录、滑动验证码保护
 - **现代化前端**: 基于 Vue 3 + Ant Design Vue 的美观Web界面
 - **简单易用**: RESTful API设计，易于集成
 - **高度可扩展**: 轻松添加新的AI功能
@@ -15,14 +16,29 @@
 
 ## 🆕 最新功能 (2025-09-30)
 
-- ✨ **AI图片编辑**: 集成 Qwen-Image-Edit-2509 模型，支持基于自然语言指令的智能图片编辑
+### 🔐 用户认证系统
+- **JWT Token 认证**: 安全的用户身份验证
+- **注册登录功能**: 支持用户注册、登录、登出
+- **滑动验证码**: 防止暴力破解，提升安全性
+- **用户信息管理**: 支持修改昵称和密码
+- **动态背景登录页**: 流动渐变效果，现代化设计
+- **路由守卫**: 未登录自动跳转登录页
+- **欢迎信息展示**: 导航栏显示用户昵称
+
+### ✨ AI图片编辑
+- 集成 Qwen-Image-Edit-2509 模型，支持基于自然语言指令的智能图片编辑
   - 背景更换、物体添加/移除
   - 颜色调整、风格转换
   - 迭代编辑、原图对比
   - 快速指令模板
-- 🎨 **界面优化**: 统一采用左右布局设计，提升用户体验
-- 🔧 **后端异步改造**: 使用 `httpx.AsyncClient` 提升性能和可靠性
-- 🔒 **安全日志**: 鉴权头脱敏与错误详情提取，保护API密钥安全
+
+### 🎨 界面优化
+- 统一采用左右布局设计，提升用户体验
+- 优化未登录状态的API调用逻辑
+
+### 🔧 后端优化
+- 使用 `httpx.AsyncClient` 提升性能和可靠性
+- 安全日志：鉴权头脱敏与错误详情提取，保护API密钥安全
 
 ## 🗂️ 项目结构
 
@@ -31,12 +47,15 @@ ai-service/
 │
 ├── app/                        # 应用主目录
 │   ├── api/                   # API接口
-│   │   ├── ai_endpoints.py   # AI服务端点（所有API路由）
+│   │   ├── ai_endpoints.py   # AI服务端点
+│   │   ├── auth_endpoints.py # 认证端点 🆕
 │   │   └── __init__.py
 │   │
 │   ├── core/                  # 核心配置
 │   │   ├── config.py         # 应用配置
 │   │   ├── logger.py         # 日志配置
+│   │   ├── auth.py           # JWT认证逻辑 🆕
+│   │   ├── user_manager.py   # 用户管理 🆕
 │   │   ├── siliconflow_models.py  # 模型配置
 │   │   └── __init__.py
 │   │
@@ -50,12 +69,15 @@ ai-service/
 │   ├── src/                  # 源代码
 │   │   ├── views/           # 页面组件
 │   │   │   ├── Home.vue            # 首页
+│   │   │   ├── Login.vue           # 登录页面 🆕
 │   │   │   ├── TextAnalysis.vue    # 文本分析
 │   │   │   ├── CodeAssist.vue      # 代码助手
 │   │   │   ├── Chat.vue            # 智能对话
 │   │   │   ├── OCR.vue             # 文字识别
 │   │   │   ├── ImageDescription.vue # 图像描述
-│   │   │   └── ImageEdit.vue       # 图片编辑 ✨
+│   │   │   └── ImageEdit.vue       # 图片编辑
+│   │   ├── components/      # 组件
+│   │   │   └── SliderCaptcha.vue   # 滑动验证码 🆕
 │   │   ├── services/        # API服务
 │   │   │   └── api.js              # API封装
 │   │   ├── App.vue          # 根组件
@@ -65,8 +87,11 @@ ai-service/
 │   └── README.md            # 前端说明
 │
 ├── static/                    # 前端构建输出（自动生成）
+├── data/                      # 数据目录
+│   └── users.json            # 用户数据 🆕
 ├── logs/                      # 日志目录
 ├── .env                       # 环境变量配置
+├── .env.example              # 环境变量示例
 ├── .gitignore                # Git忽略文件
 ├── main.py                   # 主程序入口
 ├── start.py                  # 快速启动脚本
@@ -123,18 +148,41 @@ npm install
 
 ### 4. 配置环境
 
-编辑 `.env` 文件，配置API密钥：
+复制 `.env.example` 为 `.env`，然后配置：
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件：
 ```env
+# 应用基本配置
+APP_NAME='Pure AI Service'
+APP_VERSION=2.0.0
+DEBUG=false
+HOST=0.0.0.0
+PORT=8000
+
 # AI服务配置 - 硅基流动平台
 OPENAI_API_KEY=your_siliconflow_api_key_here
 OPENAI_BASE_URL=https://api.siliconflow.cn/v1
 
 # 默认模型配置
 DEFAULT_MODEL=zai-org/GLM-4.5
+DEFAULT_TEMPERATURE=0.7
+DEFAULT_MAX_TOKENS=2000
+
+# 认证配置 🆕
+DEFAULT_ADMIN_USERNAME=admin
+DEFAULT_ADMIN_PASSWORD=123456
+JWT_SECRET_KEY=your-secret-key-change-this
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=1440
 ```
 
 **重要提醒**: 
 - 请将 `your_siliconflow_api_key_here` 替换为你的真实API密钥
+- 请修改 `JWT_SECRET_KEY` 为随机字符串
+- 请修改默认管理员密码
 - 确保 `.env` 文件已添加到 `.gitignore` 中，避免密钥泄露
 
 ## 🚀 启动服务
@@ -179,6 +227,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 **完整服务（推荐）:**
 - 🎨 **Web界面**: http://localhost:8000 （现代化前端界面）
+- 🔐 **登录页面**: http://localhost:8000/login （首次访问会自动跳转）
 - 📚 **API文档**: http://localhost:8000/docs （可交互测试）
 - 📊 **ReDoc文档**: http://localhost:8000/redoc （只读文档）
 
@@ -186,7 +235,58 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 - 🎨 **前端开发**: http://localhost:3000 （热重载，自动打开浏览器）
 - 🔌 **后端API**: http://localhost:8000
 
+**默认账号:**
+- 👤 用户名: `admin`
+- 🔑 密码: `123456` （首次启动自动创建）
+
 ## 📚 API接口
+
+### 🔐 认证接口
+
+#### 用户注册
+```python
+POST /api/v1/auth/register
+{
+    "username": "testuser",
+    "nickname": "测试用户（可选）",
+    "password": "password123",
+    "confirm_password": "password123"
+}
+```
+
+#### 用户登录
+```python
+POST /api/v1/auth/login
+{
+    "username": "admin",
+    "password": "123456"
+}
+
+# 响应
+{
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "bearer",
+    "expires_in": 1440,
+    "nickname": "管理员"
+}
+```
+
+#### 更新用户信息
+```python
+PUT /api/v1/auth/profile
+Authorization: Bearer <token>
+{
+    "nickname": "新昵称（可选）",
+    "old_password": "旧密码（修改密码时必填）",
+    "new_password": "新密码（可选）"
+}
+```
+
+#### 获取当前用户信息
+```python
+GET /api/v1/auth/me
+Authorization: Bearer <token>
+```
 
 ### 1. 文本分析
 ```python
@@ -379,6 +479,9 @@ curl http://localhost:8000/api/v1/ai/models
 - **loguru**: 日志管理
 - **aiofiles**: 异步文件处理
 - **python-multipart**: 文件上传支持
+- **PyJWT**: JWT Token认证 🆕
+- **passlib**: 密码加密 🆕
+- **python-jose**: JWT编码解码 🆕
 
 ### 前端依赖
 - **Vue 3**: 渐进式JavaScript框架
