@@ -11,6 +11,7 @@ import CodeAssist from './views/CodeAssist.vue'
 import Chat from './views/Chat.vue'
 import OCR from './views/OCR.vue'
 import ImageDescription from './views/ImageDescription.vue'
+import ImageEdit from './views/ImageEdit.vue'
 
 const routes = [
   { path: '/', component: Home },
@@ -18,7 +19,8 @@ const routes = [
   { path: '/code', component: CodeAssist },
   { path: '/chat', component: Chat },
   { path: '/ocr', component: OCR },
-  { path: '/image', component: ImageDescription }
+  { path: '/image', component: ImageDescription },
+  { path: '/image-edit', component: ImageEdit }
 ]
 
 const router = createRouter({

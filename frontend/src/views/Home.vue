@@ -61,6 +61,18 @@
           </div>
         </a-card>
       </a-col>
+    </a-row>
+
+    <a-row :gutter="20" class="feature-cards">
+      <a-col :span="8">
+        <a-card class="feature-card" @click="$router.push('/image-edit')" hoverable>
+          <div class="card-content">
+            <EditOutlined class="feature-icon" style="color: #722ed1;" />
+            <h3>图片编辑</h3>
+            <p>基于 Qwen-Image-Edit-2509 模型，通过自然语言指令编辑图片</p>
+          </div>
+        </a-card>
+      </a-col>
 
       <a-col :span="24" :md="8">
         <a-card class="stats-card">
@@ -118,6 +130,7 @@ import {
   MessageOutlined,
   CameraOutlined,
   PictureOutlined,
+  EditOutlined,
   BarChartOutlined
 } from '@ant-design/icons-vue'
 
@@ -129,6 +142,7 @@ export default {
     MessageOutlined,
     CameraOutlined,
     PictureOutlined,
+    EditOutlined,
     BarChartOutlined
   },
   data() {

@@ -73,6 +73,13 @@ export const aiService = {
   // 图像描述生成
   generateImageDescription: (data) => api.post('/ai/image/describe', data),
   
+  // 图片编辑
+  editImage: (formData) => api.post('/ai/image/edit', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }),
+  
   // 快速AI调用
   quickAI: (data) => api.post('/ai/quick', data),
   

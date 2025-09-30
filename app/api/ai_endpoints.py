@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from app.services.pure_ai_service import PureAIService
 from app.core.logger import app_logger
+from app.core.config import settings
 
 router = APIRouter(prefix="/ai", tags=["AI Services"])
 
@@ -132,10 +133,23 @@ async def ocr_image(
     """
     OCR文字识别接口
     通过视觉语言模型识别图片中的文字
+    
+    注意：图片的高和宽都必须大于28像素
     """
     try:
-        # 读取图片并转换为base64
+        # 读取图片
         contents = await file.read()
+        
+        # 检查图片大小
+        if len(contents) == 0:
+            raise HTTPException(status_code=400, detail="上传的文件为空")
+        
+        # 检查文件大小限制
+        max_size = settings.max_file_size
+        if len(contents) > max_size:
+            raise HTTPException(status_code=400, detail=f"文件大小超过限制 ({max_size} 字节)")
+        
+        # 转换为base64
         image_base64 = base64.b64encode(contents).decode('utf-8')
         
         result = await ai_service.ocr_image(
@@ -144,6 +158,8 @@ async def ocr_image(
             detail_level=detail_level
         )
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         app_logger.error(f"OCR识别失败: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -235,7 +251,7 @@ async def batch_process(
             
             if task_type == "text":
                 result = await ai_service.analyze_text(
-                    text=task.get("text"),
+                    text=task.get("text", ""),
                     task=task.get("task", "analyze"),
                     custom_prompt=task.get("prompt"),
                     model=task.get("model")
@@ -279,6 +295,43 @@ async def health_check():
         "service": "AI Service",
         "models_available": True
     }
+
+
+@router.post("/image/edit")
+async def edit_image(
+    file: UploadFile = File(...),
+    instruction: str = Form(...)
+):
+    """
+    图片编辑接口
+    使用 Qwen-Image-Edit-2509 模型根据指令编辑图片
+    """
+    try:
+        # 读取图片
+        contents = await file.read()
+        
+        # 检查图片大小
+        if len(contents) == 0:
+            raise HTTPException(status_code=400, detail="上传的文件为空")
+        
+        # 检查文件大小限制
+        max_size = settings.max_file_size
+        if len(contents) > max_size:
+            raise HTTPException(status_code=400, detail=f"文件大小超过限制 ({max_size} 字节)")
+        
+        # 转换为base64
+        image_base64 = base64.b64encode(contents).decode('utf-8')
+        
+        result = await ai_service.edit_image(
+            image_base64=image_base64,
+            instruction=instruction
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.error(f"图片编辑失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/debug/config")

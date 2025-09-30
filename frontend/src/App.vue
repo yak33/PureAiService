@@ -33,6 +33,10 @@
             <PictureOutlined />
             <span>图像描述</span>
           </a-menu-item>
+          <a-menu-item key="/image-edit">
+            <EditOutlined />
+            <span>图片编辑</span>
+          </a-menu-item>
         </a-menu>
       </div>
     </a-layout-header>
@@ -56,7 +60,8 @@ import {
   CodeOutlined,
   MessageOutlined,
   CameraOutlined,
-  PictureOutlined
+  PictureOutlined,
+  EditOutlined
 } from '@ant-design/icons-vue'
 
 export default {
@@ -67,7 +72,8 @@ export default {
     CodeOutlined,
     MessageOutlined,
     CameraOutlined,
-    PictureOutlined
+    PictureOutlined,
+    EditOutlined
   },
   computed: {
     selectedKeys() {

@@ -26,6 +26,15 @@ SILICONFLOW_MODELS = {
             "input_price": 0,
             "output_price": 0
         }
+    },
+    "image_edit": {
+        "Qwen/Qwen-Image-Edit-2509": {
+            "name": "Qwen/Qwen-Image-Edit-2509",
+            "description": "通义千问图片编辑模型，支持基于自然语言指令的图片编辑",
+            "max_tokens": 2048,
+            "input_price": 0,
+            "output_price": 0
+        }
     }
 }
 
@@ -36,7 +45,8 @@ DEFAULT_MODEL = "zai-org/GLM-4.5"
 RECOMMENDED_MODELS = {
     "chat": "zai-org/GLM-4.5",
     "vision": "zai-org/GLM-4.5V",
-    "kimi": "moonshotai/Kimi-K2-Instruct-0905"
+    "kimi": "moonshotai/Kimi-K2-Instruct-0905",
+    "image_edit": "Qwen/Qwen-Image-Edit-2509"
 }
 
 def get_model_info(model_id: str):
