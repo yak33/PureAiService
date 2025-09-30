@@ -15,3 +15,8 @@ pydantic-settings==2.1.0
 
 # 异步文件处理（用于文件上传）
 aiofiles==23.2.1
+
+# 认证和安全
+PyJWT==2.8.0
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0

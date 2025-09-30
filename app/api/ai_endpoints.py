@@ -5,15 +5,16 @@ AI服务API端点
 
 import base64
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Body
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Body, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.services.pure_ai_service import PureAIService
 from app.core.logger import app_logger
 from app.core.config import settings
+from app.core.auth import get_current_user
 
-router = APIRouter(prefix="/ai", tags=["AI Services"])
+router = APIRouter(prefix="/ai", tags=["AI Services"], dependencies=[Depends(get_current_user)])
 
 # 初始化AI服务
 ai_service = PureAIService()

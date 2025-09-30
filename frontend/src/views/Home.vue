@@ -9,6 +9,27 @@
       </a-col>
     </a-row>
 
+    <!-- 服务信息栏 -->
+    <a-row :gutter="20" class="service-info-bar">
+      <a-col :span="24">
+        <div class="info-bar-content">
+          <div class="info-item">
+            <ApiOutlined class="info-icon" />
+            <span class="info-label">可用模型:</span>
+            <span class="info-value">{{ modelCount }}</span>
+          </div>
+          <a-divider type="vertical" style="height: 20px; margin: 0 24px;" />
+          <div class="info-item">
+            <ThunderboltOutlined class="info-icon" :class="{'online-icon': isOnline, 'offline-icon': !isOnline}" />
+            <span class="info-label">服务状态:</span>
+            <span class="info-value" :class="{'online': isOnline, 'offline': !isOnline}">
+              {{ isOnline ? '在线' : '离线' }}
+            </span>
+          </div>
+        </div>
+      </a-col>
+    </a-row>
+
     <a-row :gutter="20" class="feature-cards">
       <a-col :span="8">
         <a-card class="feature-card" @click="$router.push('/text')" hoverable>
@@ -61,9 +82,7 @@
           </div>
         </a-card>
       </a-col>
-    </a-row>
 
-    <a-row :gutter="20" class="feature-cards">
       <a-col :span="8">
         <a-card class="feature-card" @click="$router.push('/image-edit')" hoverable>
           <div class="card-content">
@@ -73,20 +92,9 @@
           </div>
         </a-card>
       </a-col>
-
-      <a-col :span="24" :md="8">
-        <a-card class="stats-card">
-          <div class="card-content">
-            <BarChartOutlined class="feature-icon" style="color: #1677ff;" />
-            <h3>服务统计</h3>
-            <div class="stats">
-              <p>可用模型: <strong>{{ modelCount }}</strong></p>
-              <p>服务状态: <strong :class="{'online': isOnline, 'offline': !isOnline}">{{ isOnline ? '在线' : '离线' }}</strong></p>
-            </div>
-          </div>
-        </a-card>
-      </a-col>
     </a-row>
+
+    
 
     <a-row :gutter="20" class="info-section">
       <a-col :span="24" :md="12">
@@ -131,7 +139,8 @@ import {
   CameraOutlined,
   PictureOutlined,
   EditOutlined,
-  BarChartOutlined
+  ApiOutlined,
+  ThunderboltOutlined
 } from '@ant-design/icons-vue'
 
 export default {
@@ -143,19 +152,42 @@ export default {
     CameraOutlined,
     PictureOutlined,
     EditOutlined,
-    BarChartOutlined
+    ApiOutlined,
+    ThunderboltOutlined
   },
   data() {
     return {
       modelCount: 0,
-      isOnline: false
+      isOnline: false,
+      statusTimer: null
     }
   },
   async mounted() {
-    await this.checkServiceStatus()
+    // 检查是否已登录
+    const token = localStorage.getItem('token')
+    if (token) {
+      await this.checkServiceStatus()
+      // 每5秒自动刷新服务状态
+      this.statusTimer = setInterval(() => {
+        this.checkServiceStatus()
+      }, 5000)
+    }
+  },
+  beforeUnmount() {
+    // 组件销毁时清理定时器
+    if (this.statusTimer) {
+      clearInterval(this.statusTimer)
+    }
   },
   methods: {
     async checkServiceStatus() {
+      // 再次确认token存在
+      const token = localStorage.getItem('token')
+      if (!token) {
+        this.isOnline = false
+        return
+      }
+      
       try {
         const [healthResponse, modelsResponse] = await Promise.all([
           aiService.healthCheck(),
@@ -167,6 +199,7 @@ export default {
       } catch (error) {
         console.error('检查服务状态失败:', error)
         this.isOnline = false
+        this.modelCount = 0
       }
     }
   }
@@ -182,7 +215,7 @@ export default {
 
 .welcome-section {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 16px;
   padding: 48px 32px;
   background: linear-gradient(135deg, #f4f9ff 0%, #e8f1ff 45%, #fef6ff 100%);
   color: #1f2937;
@@ -233,6 +266,60 @@ export default {
   margin: 0 auto;
 }
 
+.service-info-bar {
+  margin-bottom: 20px;
+}
+
+.info-bar-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-icon {
+  font-size: 18px;
+  color: #6b7280;
+}
+
+.online-icon {
+  color: #52c41a;
+}
+
+.offline-icon {
+  color: #f5222d;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.info-value.online {
+  color: #52c41a;
+}
+
+.info-value.offline {
+  color: #f5222d;
+}
+
 .feature-cards {
   margin-bottom: 30px;
 }
@@ -240,10 +327,6 @@ export default {
 .feature-card {
   cursor: pointer;
   transition: all 0.3s ease;
-  height: 200px;
-}
-
-.stats-card {
   height: 200px;
 }
 
@@ -265,23 +348,6 @@ export default {
   color: #666;
   line-height: 1.6;
   margin: 0;
-}
-
-.stats {
-  margin-top: 20px;
-}
-
-.stats p {
-  margin: 8px 0;
-  font-size: 14px;
-}
-
-.online {
-  color: #67C23A;
-}
-
-.offline {
-  color: #F56C6C;
 }
 
 .feature-icon {

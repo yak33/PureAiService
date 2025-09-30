@@ -9,10 +9,17 @@ const api = axios.create({
   }
 })
 
-// 请求拦截器
+// 请求拦截器 - 添加 Token
 api.interceptors.request.use(
   (config) => {
     console.log('API请求:', config.method?.toUpperCase(), config.url, config.data)
+    
+    // 添加 Token 到请求头
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    
     return config
   },
   (error) => {
@@ -41,6 +48,13 @@ export const extractData = (response) => response?.data
 
 // AI服务API
 export const aiService = {
+  // 认证相关
+  login: (data) => api.post('/auth/login', data),
+  register: (data) => api.post('/auth/register', data),
+  logout: () => api.post('/auth/logout'),
+  getUserInfo: () => api.get('/auth/me'),
+  updateProfile: (data) => api.put('/auth/profile', data),
+  
   // 获取模型列表
   getModels: () => api.get('/ai/models'),
   

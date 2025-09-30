@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.logger import app_logger
 from app.api.ai_endpoints import router as ai_router
+from app.api.auth_endpoints import router as auth_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -30,7 +31,10 @@ if os.path.exists(static_dir):
     # 为前端路由提供fallback
     app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")
 
-# 注册新的AI路由
+# 注册认证路由（无需权限）
+app.include_router(auth_router, prefix="/api/v1")
+
+# 注册AI路由（需要权限）
 app.include_router(ai_router, prefix="/api/v1")
 
 @app.on_event("startup")

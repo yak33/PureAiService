@@ -40,6 +40,9 @@ logs/
 uploads/
 temp/
 
+# User Data
+data/users.json
+
 # IDE
 .vscode/
 .idea/

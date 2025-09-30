@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     max_file_size: int = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
     upload_dir: str = "temp_uploads"
     
+    # 认证配置
+    default_admin_username: str = os.getenv("DEFAULT_ADMIN_USERNAME", "admin")
+    default_admin_password: str = os.getenv("DEFAULT_ADMIN_PASSWORD", "123456")
+    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "your-secret-key-please-change-this")
+    jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
+    jwt_expire_minutes: int = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))
+    
     class Config:
         env_file = ".env"
 
