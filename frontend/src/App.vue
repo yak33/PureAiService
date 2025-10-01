@@ -2,7 +2,7 @@
   <a-layout id="app" v-if="!isLoginPage">
     <a-layout-header class="layout-header">
       <div class="header-content">
-        <div class="logo-wrapper">
+        <div class="logo-wrapper" @click="$router.push('/')">
           <Logo size="small" />
         </div>
         <a-menu
@@ -11,10 +11,6 @@
           @click="handleMenuClick"
           class="nav-menu"
         >
-          <a-menu-item key="/">
-            <HomeOutlined />
-            <span>首页</span>
-          </a-menu-item>
           <a-menu-item key="/text">
             <FileTextOutlined />
             <span>文本分析</span>
@@ -39,9 +35,28 @@
             <EditOutlined />
             <span>图片编辑</span>
           </a-menu-item>
+          <a-menu-item key="/models">
+            <SettingOutlined />
+            <span>模型管理</span>
+          </a-menu-item>
         </a-menu>
         
         <div class="header-actions">
+          <div v-if="platformUserInfo" class="platform-info-header">
+            <a-tooltip title="硅基流动平台账户余额">
+              <span class="balance-info">
+                <WalletOutlined class="icon" />
+                ¥{{ platformUserInfo.balance || '0.00' }}
+              </span>
+            </a-tooltip>
+            <a-divider type="vertical" style="height: 16px; margin: 0 12px;" />
+            <a-tooltip :title="`账户状态: ${platformUserInfo.status === 'normal' ? '正常' : platformUserInfo.status}`">
+              <a-tag :color="platformUserInfo.status === 'normal' ? 'success' : 'warning'" class="status-tag">
+                {{ platformUserInfo.status === 'normal' ? '正常' : platformUserInfo.status }}
+              </a-tag>
+            </a-tooltip>
+            <a-divider type="vertical" style="height: 16px; margin: 0 12px;" />
+          </div>
           <span class="welcome-text">
             <span class="wave-emoji">👋</span>
             欢迎你，
@@ -146,7 +161,9 @@ import {
   CameraOutlined,
   PictureOutlined,
   EditOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  WalletOutlined,
+  SettingOutlined
 } from '@ant-design/icons-vue'
 import { aiService } from './services/api'
 import Logo from './components/Logo.vue'
@@ -162,6 +179,8 @@ export default {
     PictureOutlined,
     EditOutlined,
     LogoutOutlined,
+    WalletOutlined,
+    SettingOutlined,
     Logo
   },
   data() {
@@ -174,7 +193,8 @@ export default {
         old_password: '',
         new_password: ''
       },
-      profileLoading: false
+      profileLoading: false,
+      platformUserInfo: null
     }
   },
   computed: {
@@ -197,11 +217,19 @@ export default {
     // 监听路由变化，更新用户信息
     '$route'() {
       this.updateUserInfo()
+      // 如果已登录，加载平台用户信息
+      if (localStorage.getItem('token')) {
+        this.loadPlatformUserInfo()
+      }
     }
   },
   mounted() {
     // 组件挂载时更新用户信息
     this.updateUserInfo()
+    // 如果已登录，加载平台用户信息
+    if (localStorage.getItem('token')) {
+      this.loadPlatformUserInfo()
+    }
   },
   methods: {
     // 更新用户信息
@@ -234,6 +262,24 @@ export default {
         
         // 跳转到登录页
         this.$router.push('/login')
+      }
+    },
+    async loadPlatformUserInfo() {
+      try {
+        const response = await aiService.getPlatformUserInfo()
+        console.log('平台用户信息响应:', response.data)
+        if (response.data.success && response.data.data) {
+          this.platformUserInfo = response.data.data
+          console.log('成功加载平台用户信息:', this.platformUserInfo)
+        } else {
+          console.warn('平台用户信息返回失败:', response.data)
+        }
+      } catch (error) {
+        console.error('获取平台用户信息失败:', error)
+        // 如果是认证失败，不显示错误（可能是未登录）
+        if (error.response?.status !== 401) {
+          console.error('平台用户信息加载错误详情:', error.response?.data)
+        }
       }
     },
     async handleUpdateProfile() {
@@ -315,6 +361,12 @@ export default {
 .logo-wrapper {
   display: flex;
   align-items: center;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.logo-wrapper:hover {
+  opacity: 0.8;
 }
 
 .header-actions {
@@ -322,6 +374,29 @@ export default {
   align-items: center;
   gap: 16px;
   margin-left: 24px;
+}
+
+.platform-info-header {
+  display: flex;
+  align-items: center;
+}
+
+.balance-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #52c41a;
+}
+
+.balance-info .icon {
+  font-size: 16px;
+}
+
+.status-tag {
+  font-size: 12px;
+  margin: 0;
 }
 
 .welcome-text {

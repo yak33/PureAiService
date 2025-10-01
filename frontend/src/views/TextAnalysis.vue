@@ -17,10 +17,24 @@
             </a-form-item>
 
             <a-form-item label="AI模型">
-              <a-select v-model:value="form.model" placeholder="选择AI模型（默认GLM-4.5）">
-                <a-select-option value="zai-org/GLM-4.5">GLM-4.5 (推荐)</a-select-option>
-                <a-select-option value="moonshotai/Kimi-K2-Instruct-0905">Kimi-K2</a-select-option>
+              <a-select 
+                v-model:value="form.model" 
+                placeholder="选择AI模型" 
+                :loading="loadingModels"
+                show-search
+                :filter-option="filterOption"
+              >
+                <a-select-option 
+                  v-for="model in availableModels" 
+                  :key="model.id" 
+                  :value="model.id"
+                >
+                  {{ model.id }}
+                </a-select-option>
               </a-select>
+              <div v-if="availableModels.length === 0" style="margin-top: 8px;">
+                <a-alert type="warning" message="请先在模型管理页面配置可用模型" show-icon />
+              </div>
             </a-form-item>
 
             <a-form-item label="自定义提示">
@@ -119,17 +133,42 @@ export default {
   data() {
     return {
       loading: false,
+      loadingModels: false,
+      availableModels: [],
       form: {
         text: '',
         task: 'analyze',
-        model: 'zai-org/GLM-4.5',
+        model: '',
         customPrompt: ''
       },
       result: null,
       error: null
     }
   },
+  async mounted() {
+    await this.loadAvailableModels()
+  },
   methods: {
+    async loadAvailableModels() {
+      this.loadingModels = true
+      try {
+        const response = await aiService.getModels()
+        if (response.data.models && response.data.models.length > 0) {
+          this.availableModels = response.data.models
+          // 设置默认模型为第一个
+          if (!this.form.model && this.availableModels.length > 0) {
+            this.form.model = this.availableModels[0].id
+          }
+        }
+      } catch (error) {
+        console.error('加载模型列表失败:', error)
+      } finally {
+        this.loadingModels = false
+      }
+    },
+    filterOption(input, option) {
+      return option.value.toLowerCase().includes(input.toLowerCase())
+    },
     async analyzeText() {
       if (!this.form.text.trim()) {
         message.warning('请输入要分析的文本内容')

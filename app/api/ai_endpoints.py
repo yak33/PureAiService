@@ -13,6 +13,7 @@ from app.services.pure_ai_service import PureAIService
 from app.core.logger import app_logger
 from app.core.config import settings
 from app.core.auth import get_current_user
+from app.core.models_config_manager import models_config_manager
 
 router = APIRouter(prefix="/ai", tags=["AI Services"], dependencies=[Depends(get_current_user)])
 
@@ -98,6 +99,46 @@ async def get_user_info():
         return result
     except Exception as e:
         app_logger.error(f"获取用户信息失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/models-config")
+async def get_models_config():
+    """
+    获取当前启用的模型配置
+    """
+    try:
+        enabled_models = models_config_manager.get_enabled_models()
+        config_info = models_config_manager.get_config_info()
+        return {
+            "success": True,
+            "enabled_models": enabled_models,
+            "config_info": config_info
+        }
+    except Exception as e:
+        app_logger.error(f"获取模型配置失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/models-config")
+async def save_models_config(models: List[Dict[str, Any]] = Body(...)):
+    """
+    保存启用的模型配置
+    
+    Body:
+        models: 模型列表，每个模型包含平台返回的完整信息
+    """
+    try:
+        success = models_config_manager.save_enabled_models(models)
+        if success:
+            return {
+                "success": True,
+                "message": f"已保存 {len(models)} 个模型配置"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="保存模型配置失败")
+    except Exception as e:
+        app_logger.error(f"保存模型配置失败: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

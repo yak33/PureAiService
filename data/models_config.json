@@ -1,0 +1,35 @@
+{
+  "enabled_models": [
+    {
+      "id": "Qwen/Qwen-Image-Edit-2509",
+      "object": "model",
+      "created": 0,
+      "owned_by": ""
+    },
+    {
+      "id": "moonshotai/Kimi-K2-Instruct-0905",
+      "object": "model",
+      "created": 0,
+      "owned_by": ""
+    },
+    {
+      "id": "zai-org/GLM-4.5V",
+      "object": "model",
+      "created": 0,
+      "owned_by": ""
+    },
+    {
+      "id": "zai-org/GLM-4.5",
+      "object": "model",
+      "created": 0,
+      "owned_by": ""
+    },
+    {
+      "id": "MiniMaxAI/MiniMax-M1-80k",
+      "object": "model",
+      "created": 0,
+      "owned_by": ""
+    }
+  ],
+  "updated_at": "2025-10-01T22:07:07.374401"
+}

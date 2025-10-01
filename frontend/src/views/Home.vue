@@ -15,21 +15,43 @@
     <!-- 服务信息栏 -->
     <a-row :gutter="20" class="service-info-bar">
       <a-col :span="24">
-        <div class="info-bar-content">
-          <div class="info-item">
-            <ApiOutlined class="info-icon" />
-            <span class="info-label">可用模型:</span>
-            <span class="info-value">{{ modelCount }}</span>
+        <a-card>
+          <div class="info-header">
+            <div class="info-item">
+              <ApiOutlined class="info-icon" />
+              <span class="info-label">可用模型:</span>
+              <span class="info-value">{{ modelCount }}</span>
+            </div>
+            <a-divider type="vertical" style="height: 20px; margin: 0 24px;" />
+            <div class="info-item">
+              <ThunderboltOutlined class="info-icon" :class="{'online-icon': isOnline, 'offline-icon': !isOnline}" />
+              <span class="info-label">服务状态:</span>
+              <span class="info-value" :class="{'online': isOnline, 'offline': !isOnline}">
+                {{ isOnline ? '在线' : '离线' }}
+              </span>
+            </div>
           </div>
-          <a-divider type="vertical" style="height: 20px; margin: 0 24px;" />
-          <div class="info-item">
-            <ThunderboltOutlined class="info-icon" :class="{'online-icon': isOnline, 'offline-icon': !isOnline}" />
-            <span class="info-label">服务状态:</span>
-            <span class="info-value" :class="{'online': isOnline, 'offline': !isOnline}">
-              {{ isOnline ? '在线' : '离线' }}
-            </span>
+          
+          <!-- 模型列表滚动展示 -->
+          <div v-if="availableModels.length > 0" class="models-scroll-container">
+            <div class="models-scroll-content">
+              <a-tag 
+                v-for="model in displayModels" 
+                :key="model.id" 
+                color="blue" 
+                class="model-tag"
+              >
+                {{ model.id }}
+              </a-tag>
+            </div>
           </div>
-        </div>
+          <a-empty 
+            v-else 
+            description="暂无配置模型，请前往模型管理页面配置" 
+            :image-style="{height: '40px'}"
+            style="margin: 16px 0;"
+          />
+        </a-card>
       </a-col>
     </a-row>
 
@@ -100,39 +122,7 @@
     
 
     <a-row :gutter="20" class="info-section">
-      <a-col :span="24" :md="8">
-        <a-card class="info-card" :loading="platformLoading">
-          <template #title>
-            <div class="card-title">
-              <span class="title-icon">💰</span>
-              <span>平台账户</span>
-            </div>
-          </template>
-          <div v-if="platformUserInfo" class="platform-info">
-            <div class="info-row">
-              <span class="label">用户名:</span>
-              <span class="value">{{ platformUserInfo.name || '-' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">可用余额:</span>
-              <span class="value balance">¥{{ platformUserInfo.balance || '0.00' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">总余额:</span>
-              <span class="value">¥{{ platformUserInfo.totalBalance || '0.00' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">账户状态:</span>
-              <a-tag :color="platformUserInfo.status === 'normal' ? 'success' : 'warning'">
-                {{ platformUserInfo.status === 'normal' ? '正常' : platformUserInfo.status }}
-              </a-tag>
-            </div>
-          </div>
-          <a-empty v-else description="未获取到账户信息" :image-style="{height: '60px'}" />
-        </a-card>
-      </a-col>
-
-      <a-col :span="24" :md="8">
+      <a-col :span="24" :md="12">
         <a-card class="info-card">
           <template #title>
             <div class="card-title">
@@ -150,7 +140,7 @@
         </a-card>
       </a-col>
 
-      <a-col :span="24" :md="8">
+      <a-col :span="24" :md="12">
         <a-card class="info-card">
           <template #title>
             <div class="card-title">
@@ -203,8 +193,16 @@ export default {
       modelCount: 0,
       isOnline: false,
       statusTimer: null,
-      platformLoading: false,
-      platformUserInfo: null
+      availableModels: [],
+      displayModels: []
+    }
+  },
+  computed: {
+    // 计算显示的模型（包含重复以实现无缝滚动）
+    scrollModels() {
+      if (this.availableModels.length === 0) return []
+      // 复制模型列表3次以实现无缝循环
+      return [...this.availableModels, ...this.availableModels, ...this.availableModels]
     }
   },
   async mounted() {
@@ -212,7 +210,6 @@ export default {
     const token = localStorage.getItem('token')
     if (token) {
       await this.checkServiceStatus()
-      await this.loadPlatformUserInfo()
       // 每5秒自动刷新服务状态
       this.statusTimer = setInterval(() => {
         this.checkServiceStatus()
@@ -241,24 +238,13 @@ export default {
         ])
 
         this.isOnline = healthResponse.data.status === 'healthy'
-        this.modelCount = modelsResponse.data.models.length
+        this.availableModels = modelsResponse.data.models || []
+        this.modelCount = modelsResponse.data.total || this.availableModels.length
+        this.displayModels = this.scrollModels
       } catch (error) {
         console.error('检查服务状态失败:', error)
         this.isOnline = false
         this.modelCount = 0
-      }
-    },
-    async loadPlatformUserInfo() {
-      this.platformLoading = true
-      try {
-        const response = await aiService.getPlatformUserInfo()
-        if (response.data.success && response.data.data) {
-          this.platformUserInfo = response.data.data
-        }
-      } catch (error) {
-        console.error('获取平台用户信息失败:', error)
-      } finally {
-        this.platformLoading = false
       }
     }
   }
@@ -343,18 +329,49 @@ export default {
 }
 
 .service-info-bar {
-  margin-bottom: 20px;
+  margin-bottom: 30px;
 }
 
-.info-bar-content {
+.info-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 24px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin-bottom: 16px;
+}
+
+.models-scroll-container {
+  margin-top: 16px;
+  overflow: hidden;
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 12px 0;
+}
+
+.models-scroll-content {
+  display: flex;
+  gap: 8px;
+  animation: scroll-left 30s linear infinite;
+  white-space: nowrap;
+}
+
+.models-scroll-content:hover {
+  animation-play-state: paused;
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+.model-tag {
+  font-size: 13px;
+  padding: 4px 12px;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 .info-item {
@@ -456,39 +473,6 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
-}
-
-.platform-info {
-  padding: 8px 0;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.info-row .label {
-  color: #666;
-  font-size: 14px;
-}
-
-.info-row .value {
-  font-weight: 500;
-  color: #333;
-  font-size: 14px;
-}
-
-.info-row .value.balance {
-  color: #52c41a;
-  font-size: 16px;
   font-weight: 600;
 }
 

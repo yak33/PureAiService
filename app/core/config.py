@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     openai_base_url: str = os.getenv("OPENAI_BASE_URL", "https://api.siliconflow.cn/v1")
     
-    # 默认模型配置
-    default_model: str = os.getenv("DEFAULT_MODEL", "zai-org/GLM-4.5")
+    # 默认参数配置（模型需在模型管理页面配置）
+    default_model: str = os.getenv("DEFAULT_MODEL", "")  # 不再使用默认模型
     default_temperature: float = float(os.getenv("DEFAULT_TEMPERATURE", "0.7"))
     default_max_tokens: int = int(os.getenv("DEFAULT_MAX_TOKENS", "2000"))
     

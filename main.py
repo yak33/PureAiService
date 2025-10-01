@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.logger import app_logger
 from app.api.ai_endpoints import router as ai_router
 from app.api.auth_endpoints import router as auth_router
+from app.core.request_logging_middleware import RequestLoggingMiddleware
 
 app = FastAPI(
     title=settings.app_name,
@@ -15,6 +16,9 @@ app = FastAPI(
     description="纯AI服务API - 所有功能通过大模型API实现",
     debug=settings.debug
 )
+
+# 添加请求日志中间件（第一个添加，最后执行）
+app.add_middleware(RequestLoggingMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

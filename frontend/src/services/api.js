@@ -64,6 +64,12 @@ export const aiService = {
   // 获取平台用户信息
   getPlatformUserInfo: () => api.get('/ai/platform/user-info'),
   
+  // 获取模型配置
+  getModelsConfig: () => api.get('/ai/models-config'),
+  
+  // 保存模型配置
+  saveModelsConfig: (models) => api.post('/ai/models-config', models),
+  
   // 健康检查
   healthCheck: () => api.get('/ai/health'),
   

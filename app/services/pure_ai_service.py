@@ -12,7 +12,6 @@ import httpx
 from httpx import RequestError, ResponseNotRead
 from app.core.config import settings
 from app.core.logger import app_logger
-from app.core.siliconflow_models import SILICONFLOW_MODELS, DEFAULT_MODEL, RECOMMENDED_MODELS
 
 
 class PureAIService:
@@ -32,7 +31,7 @@ class PureAIService:
         }
         
         # 设置默认模型和超时配置
-        self.default_model = settings.default_model or DEFAULT_MODEL
+        self.default_model = settings.default_model
         self._timeout = httpx.Timeout(self.timeout)
         
     async def call_ai(
@@ -63,8 +62,12 @@ class PureAIService:
                 - error: 错误信息(如果失败)
         """
         try:
-            # 如果未指定模型，则使用默认模型
-            model = model or self.default_model
+            # 检查是否提供了模型
+            if not model:
+                return {
+                    "success": False,
+                    "error": "未指定模型，请先在模型管理页面配置可用模型"
+                }
 
             # 移除敏感信息，只记录部分内容用于日志
             log_messages = json.dumps(messages, ensure_ascii=False)
@@ -461,8 +464,14 @@ class PureAIService:
                 - usage: token使用情况
                 - error: 错误信息(如果失败)
         """
-        # 使用推荐的视觉模型进行OCR识别
-        vision_model = RECOMMENDED_MODELS.get("vision", "zai-org/GLM-4.5V")
+        # 检查是否提供了模型
+        if not model:
+            return {
+                "success": False,
+                "error": "未指定模型，请先在模型管理页面配置可用的视觉模型"
+            }
+        
+        vision_model = model
         
         # 定义不同语言的识别提示词
         language_prompts = {
@@ -554,8 +563,14 @@ class PureAIService:
                 - model: 实际使用的模型名称
                 - usage: token使用情况
         """
-        # 使用推荐的对话模型处理代码任务
-        code_model = RECOMMENDED_MODELS.get("chat", "zai-org/GLM-4.5")
+        # 检查是否提供了模型
+        if not model:
+            return {
+                "success": False,
+                "error": "未指定模型，请先在模型管理页面配置可用的对话模型"
+            }
+        
+        code_model = model
         
         # 定义不同代码任务的提示词模板
         task_prompts = {
@@ -644,40 +659,35 @@ class PureAIService:
     
     def list_available_models(self) -> Dict[str, Any]:
         """
-        列出所有可用的AI模型（本地配置）
+        列出所有可用的AI模型（从用户配置文件读取）
         
         Returns:
             Dict[str, Any]: 包含所有可用模型信息的字典
-                - models: 模型列表，每个模型包含id、name、category、description等信息
-                - default_model: 默认模型名称
-                - recommended: 推荐模型字典，按用途分类
+                - models: 模型列表
+                - total: 模型总数
+                - source: 数据来源（config/default）
         """
-        available_models = []
+        from app.core.models_config_manager import models_config_manager
         
-        # 遍历所有分类的模型
-        for category, models in SILICONFLOW_MODELS.items():
-            for model_id, info in models.items():
-                # 构造模型信息字典
-                available_models.append({
-                    "id": model_id,
-                    "name": info["name"],
-                    "category": category,
-                    "description": info["description"],
-                    "max_tokens": info.get("max_tokens", "N/A"),
-                    "price": {
-                        "input": info.get("input_price", 0),
-                        "output": info.get("output_price", 0)
-                    } if category != "image" else {
-                        "per_image": info.get("price", 0)
-                    }
-                })
+        # 从配置文件读取用户启用的模型
+        enabled_models = models_config_manager.get_enabled_models()
         
-        # 返回模型信息，包括所有模型、默认模型和推荐模型
-        return {
-            "models": available_models,
-            "default_model": self.default_model,
-            "recommended": RECOMMENDED_MODELS
-        }
+        if enabled_models:
+            # 如果有配置的模型，返回配置的模型列表
+            return {
+                "models": enabled_models,
+                "total": len(enabled_models),
+                "source": "config",
+                "message": "使用用户配置的模型列表"
+            }
+        else:
+            # 如果没有配置，返回默认提示
+            return {
+                "models": [],
+                "total": 0,
+                "source": "empty",
+                "message": "请前往模型管理页面选择要使用的模型"
+            }
     
     async def get_platform_models(
         self,
@@ -791,7 +801,7 @@ class PureAIService:
     async def generate_image_description(
         self,
         prompt: str,
-        model: str = "zai-org/GLM-4.5",
+        model: Optional[str] = None,
         style: str = "realistic",
         n: int = 1
     ) -> Dict[str, Any]:
@@ -800,7 +810,7 @@ class PureAIService:
         
         Args:
             prompt: 基础描述，用户提供的简单图像描述
-            model: 使用的模型名称，默认使用zai-org/GLM-4.5
+            model: 使用的模型名称
             style: 图像风格，支持 realistic(写实)、artistic(艺术)、cartoon(卡通)等
             n: 生成数量，需要生成的图像描述数量
             
@@ -812,6 +822,12 @@ class PureAIService:
                 - count: 实际生成的描述数量
                 - error: 错误信息(如果失败)
         """
+        # 检查是否提供了模型
+        if not model:
+            return {
+                "success": False,
+                "error": "未指定模型，请先在模型管理页面配置可用的对话模型"
+            }
         # 定义不同风格的提示词模板
         style_prompts = {
             "realistic": "请生成一个超现实、高清、细节丰富的图像描述",
@@ -859,15 +875,15 @@ class PureAIService:
         self,
         image_base64: str,
         instruction: str,
-        model: str = "Qwen/Qwen-Image-Edit-2509"
+        model: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        图片编辑功能 - 使用 Qwen-Image-Edit-2509 模型
+        图片编辑功能 - 使用图像编辑模型
         
         Args:
             image_base64: Base64编码的原始图片数据
             instruction: 编辑指令，描述想要对图片进行的修改
-            model: 使用的模型名称，默认使用 Qwen/Qwen-Image-Edit-2509
+            model: 使用的模型名称
             
         Returns:
             Dict[str, Any]: 图片编辑结果
@@ -877,6 +893,13 @@ class PureAIService:
                 - usage: token使用情况
                 - error: 错误信息(如果失败)
         """
+        # 检查是否提供了模型
+        if not model:
+            return {
+                "success": False,
+                "error": "未指定模型，请先在模型管理页面配置可用的图像编辑模型"
+            }
+        
         try:
             # 构造图片编辑请求 - 使用 images/generations 接口
             payload = {

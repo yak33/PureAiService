@@ -13,6 +13,7 @@ import Chat from './views/Chat.vue'
 import OCR from './views/OCR.vue'
 import ImageDescription from './views/ImageDescription.vue'
 import ImageEdit from './views/ImageEdit.vue'
+import ModelsManagement from './views/ModelsManagement.vue'
 
 const routes = [
   { path: '/login', component: Login, meta: { public: true } },
@@ -22,7 +23,8 @@ const routes = [
   { path: '/chat', component: Chat },
   { path: '/ocr', component: OCR },
   { path: '/image', component: ImageDescription },
-  { path: '/image-edit', component: ImageEdit }
+  { path: '/image-edit', component: ImageEdit },
+  { path: '/models', component: ModelsManagement }
 ]
 
 const router = createRouter({
