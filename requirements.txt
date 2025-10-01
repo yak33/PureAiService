@@ -18,5 +18,6 @@ aiofiles==23.2.1
 
 # 认证和安全
 PyJWT==2.8.0
-passlib[bcrypt]==1.7.4
+passlib==1.7.4
+bcrypt==4.0.1
 python-jose[cryptography]==3.3.0

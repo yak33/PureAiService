@@ -1,0 +1,111 @@
+# Docker Compose 生产环境配置
+# Author: ZHANGCHAO
+# 用于云服务器部署，与宿主机的 nginx、redis、mysql 等服务配合使用
+
+version: '3.8'
+
+services:
+  # 后端服务 - FastAPI
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pure-ai-backend:latest
+    container_name: pure-ai-backend
+    restart: always
+    # 生产环境：不直接暴露端口，通过宿主机 nginx 反向代理
+    expose:
+      - "8000"
+    environment:
+      # 应用配置
+      - APP_NAME=Pure AI Service
+      - APP_VERSION=2.0.0
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      
+      # AI 服务配置（从 .env.production 文件读取）
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.siliconflow.cn/v1}
+      
+      # 模型配置
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-zai-org/GLM-4.5}
+      - DEFAULT_TEMPERATURE=${DEFAULT_TEMPERATURE:-0.7}
+      - DEFAULT_MAX_TOKENS=${DEFAULT_MAX_TOKENS:-2000}
+      
+      # 认证配置
+      - DEFAULT_ADMIN_USERNAME=${DEFAULT_ADMIN_USERNAME}
+      - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-1440}
+      
+      # 日志配置
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FILE=logs/app.log
+      
+      # API 超时
+      - API_TIMEOUT=${API_TIMEOUT:-60}
+      
+      # 文件处理
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10485760}
+    
+    volumes:
+      # 持久化数据（使用绝对路径或具名卷）
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./temp_uploads:/app/temp_uploads
+    
+    networks:
+      - ai-service-network
+      # 如果需要连接宿主机的其他服务（如 redis、mysql），添加到它们的网络
+      # - existing-services-network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/ai/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    
+    # 生产环境资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 前端服务已移除（低配置服务器优化）
+  # 前端采用本地打包 + 静态文件部署方案：
+  # 1. 本地构建：cd frontend && pnpm build
+  # 2. 产物目录：frontend/dist/
+  # 3. 上传到服务器：scp -r frontend/dist/* user@server:/var/www/pure-ai-frontend/
+  # 4. Nginx 配置：直接服务静态文件 + 代理 API 到后端容器
+
+networks:
+  ai-service-network:
+    driver: bridge
+    name: ai-service-network
+  # 如果需要连接到宿主机上已存在的网络（如 redis、mysql 所在的网络）
+  # existing-services-network:
+  #   external: true
+  #   name: your-existing-network-name
+
+# 卷定义（使用具名卷更适合生产环境）
+volumes:
+  data:
+    driver: local
+  logs:
+    driver: local
+  temp_uploads:
+    driver: local

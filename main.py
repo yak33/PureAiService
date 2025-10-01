@@ -31,6 +31,18 @@ if os.path.exists(static_dir):
     # 为前端路由提供fallback
     app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")
 
+# 健康检查端点（必须在其他路由之前注册，避免被认证拦截）
+@app.get("/api/v1/ai/health")
+async def health_check():
+    """
+    公开的健康检查接口（不需要认证）
+    """
+    return {
+        "status": "healthy",
+        "service": settings.app_name,
+        "version": settings.app_version
+    }
+
 # 注册认证路由（无需权限）
 app.include_router(auth_router, prefix="/api/v1")
 

@@ -157,14 +157,12 @@ cp .env.example .env
 ```env
 # 应用基本配置
 APP_NAME='Pure AI Service'
-APP_VERSION=2.0.0
 DEBUG=false
 HOST=0.0.0.0
 PORT=8000
 
 # AI服务配置 - 硅基流动平台
 OPENAI_API_KEY=your_siliconflow_api_key_here
-OPENAI_BASE_URL=https://api.siliconflow.cn/v1
 
 # 默认模型配置
 DEFAULT_MODEL=zai-org/GLM-4.5
@@ -172,6 +170,7 @@ DEFAULT_TEMPERATURE=0.7
 DEFAULT_MAX_TOKENS=2000
 
 # 认证配置 🆕
+{{ ... }}
 DEFAULT_ADMIN_USERNAME=admin
 DEFAULT_ADMIN_PASSWORD=123456
 JWT_SECRET_KEY=your-secret-key-change-this
@@ -530,6 +529,102 @@ python start.py
 ## 📄 许可证
 
 MIT License
+
+## 🐳 Docker 部署
+
+### 开发环境部署
+
+适用于本地开发和测试：
+
+```bash
+# 1. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，填入真实的 API 密钥
+
+# 2. 启动服务
+docker compose up -d
+
+# 3. 查看服务状态
+docker compose ps
+
+# 4. 查看日志
+docker compose logs -f
+```
+
+访问地址：
+- 🎨 前端界面: http://localhost:8080
+- 🔌 后端API: http://localhost:8000
+
+### 生产环境部署（云服务器）
+
+适用于 CentOS 7.9 等 Linux 服务器：
+
+#### 快速部署
+
+```bash
+# 1. 赋予部署脚本执行权限
+chmod +x deploy.sh
+
+# 2. 执行部署
+./deploy.sh deploy
+```
+
+#### 手动部署
+
+```bash
+# 1. 配置环境变量
+cp .env.production .env
+vim .env  # 填入真实配置
+
+# 2. 创建必要目录
+mkdir -p data logs temp_uploads
+
+# 3. 构建并启动服务
+docker compose -f docker-compose.prod.yml up -d
+
+# 4. 配置宿主机 nginx 反向代理
+sudo cp nginx-host.conf /etc/nginx/conf.d/pure-ai-service.conf
+sudo vim /etc/nginx/conf.d/pure-ai-service.conf  # 修改域名
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+#### 常用运维命令
+
+```bash
+# 查看服务状态
+./deploy.sh status
+
+# 查看日志
+./deploy.sh logs
+./deploy.sh logs backend  # 只看后端日志
+
+# 重启服务
+./deploy.sh restart
+
+# 更新服务
+./deploy.sh update
+
+# 备份数据
+./deploy.sh backup
+
+# 停止服务
+./deploy.sh stop
+```
+
+### Docker 部署说明
+
+详细的部署文档请参考：
+- 📖 [完整部署指南](DEPLOYMENT.md) - 包含环境要求、部署步骤、故障排查等
+- 🔧 [部署脚本说明](deploy.sh) - 自动化部署工具
+- 🌐 [Nginx 配置示例](nginx-host.conf) - 反向代理配置
+
+**配置文件说明：**
+- `Dockerfile` - 后端镜像构建文件
+- `docker-compose.yml` - 开发环境编排配置
+- `docker-compose.prod.yml` - 生产环境编排配置
+- `frontend/Dockerfile` - 前端镜像构建文件
+- `frontend/nginx.conf` - 前端容器内 nginx 配置
 
 ## 🤝 贡献
 

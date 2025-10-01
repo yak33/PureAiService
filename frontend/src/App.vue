@@ -193,9 +193,27 @@ export default {
         this.profileForm.old_password = ''
         this.profileForm.new_password = ''
       }
+    },
+    // 监听路由变化，更新用户信息
+    '$route'() {
+      this.updateUserInfo()
     }
   },
+  mounted() {
+    // 组件挂载时更新用户信息
+    this.updateUserInfo()
+  },
   methods: {
+    // 更新用户信息
+    updateUserInfo() {
+      const username = localStorage.getItem('username')
+      const nickname = localStorage.getItem('nickname')
+      
+      if (username) {
+        this.username = username
+        this.nickname = nickname || username
+      }
+    },
     handleMenuClick({ key }) {
       if (key !== this.$route.path) {
         this.$router.push(key)

@@ -16,7 +16,8 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../static',
-    assetsDir: 'assets'
+    outDir: 'dist',  // 使用标准的 dist 目录
+    assetsDir: 'assets',
+    emptyOutDir: true  // 构建前清空输出目录
   }
 })
