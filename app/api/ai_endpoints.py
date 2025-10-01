@@ -166,30 +166,6 @@ async def ocr_image(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/document/analyze")
-async def analyze_document(
-    content: str = Form(...),
-    doc_type: str = Form("auto"),
-    task: str = Form("analyze"),
-    custom_prompt: Optional[str] = Form(None)
-):
-    """
-    文档分析接口
-    支持PDF、Word、Excel、PPT等文档的智能分析
-    """
-    try:
-        result = await ai_service.analyze_document(
-            content=content,
-            doc_type=doc_type,
-            task=task,
-            custom_prompt=custom_prompt
-        )
-        return result
-    except Exception as e:
-        app_logger.error(f"文档分析失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.post("/image/describe")
 async def generate_image_description(request: ImageDescriptionRequest):
     """

@@ -77,13 +77,6 @@ export const aiService = {
     }
   }),
   
-  // 文档分析
-  analyzeDocument: (formData) => api.post('/ai/document/analyze', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  }),
-  
   // 图像描述生成
   generateImageDescription: (data) => api.post('/ai/image/describe', data),
   
