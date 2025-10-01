@@ -55,12 +55,49 @@ class ImageDescriptionRequest(BaseModel):
 @router.get("/models")
 async def list_models():
     """
-    获取所有可用的AI模型列表
+    获取所有可用的AI模型列表（本地配置）
     """
     try:
         return ai_service.list_available_models()
     except Exception as e:
         app_logger.error(f"获取模型列表失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/platform/models")
+async def get_platform_models(
+    type: Optional[str] = None,
+    sub_type: Optional[str] = None
+):
+    """
+    从硅基流动平台获取用户可用的模型列表
+    
+    Query参数:
+        - type: 模型类型 (text/image/audio/video)
+        - sub_type: 模型子类型 (chat/embedding/reranker/text-to-image等)
+    """
+    try:
+        result = await ai_service.get_platform_models(
+            model_type=type,
+            sub_type=sub_type
+        )
+        return result
+    except Exception as e:
+        app_logger.error(f"获取平台模型列表失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/platform/user-info")
+async def get_user_info():
+    """
+    获取硅基流动平台的用户账户信息
+    包括余额、状态等信息
+    """
+    try:
+        result = await ai_service.get_user_info()
+        return result
+    except Exception as e:
+        app_logger.error(f"获取用户信息失败: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

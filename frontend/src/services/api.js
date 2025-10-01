@@ -55,8 +55,14 @@ export const aiService = {
   getUserInfo: () => api.get('/auth/me'),
   updateProfile: (data) => api.put('/auth/profile', data),
   
-  // 获取模型列表
+  // 获取模型列表（本地配置）
   getModels: () => api.get('/ai/models'),
+  
+  // 获取平台模型列表
+  getPlatformModels: (params) => api.get('/ai/platform/models', { params }),
+  
+  // 获取平台用户信息
+  getPlatformUserInfo: () => api.get('/ai/platform/user-info'),
   
   // 健康检查
   healthCheck: () => api.get('/ai/health'),

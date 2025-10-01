@@ -100,7 +100,39 @@
     
 
     <a-row :gutter="20" class="info-section">
-      <a-col :span="24" :md="12">
+      <a-col :span="24" :md="8">
+        <a-card class="info-card" :loading="platformLoading">
+          <template #title>
+            <div class="card-title">
+              <span class="title-icon">💰</span>
+              <span>平台账户</span>
+            </div>
+          </template>
+          <div v-if="platformUserInfo" class="platform-info">
+            <div class="info-row">
+              <span class="label">用户名:</span>
+              <span class="value">{{ platformUserInfo.name || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">可用余额:</span>
+              <span class="value balance">¥{{ platformUserInfo.balance || '0.00' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">总余额:</span>
+              <span class="value">¥{{ platformUserInfo.totalBalance || '0.00' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">账户状态:</span>
+              <a-tag :color="platformUserInfo.status === 'normal' ? 'success' : 'warning'">
+                {{ platformUserInfo.status === 'normal' ? '正常' : platformUserInfo.status }}
+              </a-tag>
+            </div>
+          </div>
+          <a-empty v-else description="未获取到账户信息" :image-style="{height: '60px'}" />
+        </a-card>
+      </a-col>
+
+      <a-col :span="24" :md="8">
         <a-card class="info-card">
           <template #title>
             <div class="card-title">
@@ -118,7 +150,7 @@
         </a-card>
       </a-col>
 
-      <a-col :span="24" :md="12">
+      <a-col :span="24" :md="8">
         <a-card class="info-card">
           <template #title>
             <div class="card-title">
@@ -170,7 +202,9 @@ export default {
     return {
       modelCount: 0,
       isOnline: false,
-      statusTimer: null
+      statusTimer: null,
+      platformLoading: false,
+      platformUserInfo: null
     }
   },
   async mounted() {
@@ -178,6 +212,7 @@ export default {
     const token = localStorage.getItem('token')
     if (token) {
       await this.checkServiceStatus()
+      await this.loadPlatformUserInfo()
       // 每5秒自动刷新服务状态
       this.statusTimer = setInterval(() => {
         this.checkServiceStatus()
@@ -211,6 +246,19 @@ export default {
         console.error('检查服务状态失败:', error)
         this.isOnline = false
         this.modelCount = 0
+      }
+    },
+    async loadPlatformUserInfo() {
+      this.platformLoading = true
+      try {
+        const response = await aiService.getPlatformUserInfo()
+        if (response.data.success && response.data.data) {
+          this.platformUserInfo = response.data.data
+        }
+      } catch (error) {
+        console.error('获取平台用户信息失败:', error)
+      } finally {
+        this.platformLoading = false
       }
     }
   }
@@ -408,6 +456,39 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-weight: 600;
+}
+
+.platform-info {
+  padding: 8px 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  color: #666;
+  font-size: 14px;
+}
+
+.info-row .value {
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.info-row .value.balance {
+  color: #52c41a;
+  font-size: 16px;
   font-weight: 600;
 }
 

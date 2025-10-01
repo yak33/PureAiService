@@ -644,7 +644,7 @@ class PureAIService:
     
     def list_available_models(self) -> Dict[str, Any]:
         """
-        列出所有可用的AI模型
+        列出所有可用的AI模型（本地配置）
         
         Returns:
             Dict[str, Any]: 包含所有可用模型信息的字典
@@ -678,6 +678,115 @@ class PureAIService:
             "default_model": self.default_model,
             "recommended": RECOMMENDED_MODELS
         }
+    
+    async def get_platform_models(
+        self,
+        model_type: Optional[str] = None,
+        sub_type: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        从硅基流动平台获取用户可用的模型列表
+        
+        Args:
+            model_type: 模型类型，可选 text/image/audio/video
+            sub_type: 模型子类型，如 chat/embedding/reranker/text-to-image等
+            
+        Returns:
+            Dict[str, Any]: 平台返回的模型列表
+                - success: 是否成功
+                - data: 模型列表数据
+                - error: 错误信息(如果失败)
+        """
+        try:
+            # 构建查询参数
+            params = {}
+            if model_type:
+                params['type'] = model_type
+            if sub_type:
+                params['sub_type'] = sub_type
+            
+            app_logger.info(f"获取平台模型列表: type={model_type}, sub_type={sub_type}")
+            
+            # 调用硅基流动API
+            async with httpx.AsyncClient(
+                base_url=self.base_url,
+                headers=self.headers,
+                timeout=self._timeout
+            ) as client:
+                response = await client.get("/models", params=params)
+                
+                app_logger.info(f"平台模型列表响应状态码: {response.status_code}")
+                
+                if not response.is_success:
+                    return await self._build_error_response(response)
+                
+                result = response.json()
+                
+                return {
+                    "success": True,
+                    "data": result
+                }
+                
+        except Exception as e:
+            app_logger.error(f"获取平台模型列表失败: {str(e)}")
+            return {
+                "success": False,
+                "error": f"获取平台模型列表失败: {str(e)}"
+            }
+    
+    async def get_user_info(self) -> Dict[str, Any]:
+        """
+        获取用户账户信息，包括余额和状态
+        
+        Returns:
+            Dict[str, Any]: 用户账户信息
+                - success: 是否成功
+                - data: 用户信息数据
+                    - id: 用户ID
+                    - name: 用户名
+                    - email: 邮箱
+                    - balance: 可用余额
+                    - chargeBalance: 充值余额
+                    - totalBalance: 总余额
+                    - status: 账户状态
+                - error: 错误信息(如果失败)
+        """
+        try:
+            app_logger.info("获取用户账户信息")
+            
+            # 调用硅基流动API
+            async with httpx.AsyncClient(
+                base_url=self.base_url,
+                headers=self.headers,
+                timeout=self._timeout
+            ) as client:
+                response = await client.get("/user/info")
+                
+                app_logger.info(f"用户信息响应状态码: {response.status_code}")
+                
+                if not response.is_success:
+                    return await self._build_error_response(response)
+                
+                result = response.json()
+                
+                # 硅基流动返回格式: {"code": 20000, "status": true, "data": {...}}
+                if result.get("code") == 20000 and result.get("status"):
+                    return {
+                        "success": True,
+                        "data": result.get("data", {})
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": result.get("message", "获取用户信息失败")
+                    }
+                
+        except Exception as e:
+            app_logger.error(f"获取用户信息失败: {str(e)}")
+            return {
+                "success": False,
+                "error": f"获取用户信息失败: {str(e)}"
+            }
     
     async def generate_image_description(
         self,
