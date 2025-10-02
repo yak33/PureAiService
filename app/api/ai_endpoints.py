@@ -190,12 +190,14 @@ async def code_assist(request: CodeRequest):
     代码辅助接口
     支持代码审查、优化、解释、调试、生成等任务
     """
+    app_logger.info(f"收到代码辅助请求: task={request.task}, language={request.language}, model={request.model}")
     try:
         result = await ai_service.code_assist(
             code=request.code,
             task=request.task,
             language=request.language,
-            requirements=request.requirements
+            requirements=request.requirements,
+            model=request.model
         )
         return result
     except Exception as e:
@@ -207,7 +209,8 @@ async def code_assist(request: CodeRequest):
 async def ocr_image(
     file: UploadFile = File(...),
     language: str = Form("auto"),
-    detail_level: str = Form("medium")
+    detail_level: str = Form("medium"),
+    model: Optional[str] = Form(None)
 ):
     """
     OCR文字识别接口
@@ -215,6 +218,7 @@ async def ocr_image(
     
     注意：图片的高和宽都必须大于28像素
     """
+    app_logger.info(f"收到OCR请求: language={language}, detail_level={detail_level}, model={model}")
     try:
         # 读取图片
         contents = await file.read()
@@ -234,7 +238,8 @@ async def ocr_image(
         result = await ai_service.ocr_image(
             image_base64=image_base64,
             language=language,
-            detail_level=detail_level
+            detail_level=detail_level,
+            model=model
         )
         return result
     except HTTPException:
@@ -316,7 +321,8 @@ async def batch_process(
                     code=task.get("code"),
                     task=task.get("task", "review"),
                     language=task.get("language"),
-                    requirements=task.get("requirements")
+                    requirements=task.get("requirements"),
+                    model=task.get("model")
                 )
             elif task_type == "chat":
                 result = await ai_service.custom_chat(
@@ -355,12 +361,14 @@ async def health_check():
 @router.post("/image/edit")
 async def edit_image(
     file: UploadFile = File(...),
-    instruction: str = Form(...)
+    instruction: str = Form(...),
+    model: Optional[str] = Form(None)
 ):
     """
     图片编辑接口
-    使用 Qwen-Image-Edit-2509 模型根据指令编辑图片
+    使用指定的图像编辑模型根据指令编辑图片
     """
+    app_logger.info(f"收到图片编辑请求: instruction={instruction[:50]}..., model={model}")
     try:
         # 读取图片
         contents = await file.read()
@@ -379,7 +387,8 @@ async def edit_image(
         
         result = await ai_service.edit_image(
             image_base64=image_base64,
-            instruction=instruction
+            instruction=instruction,
+            model=model
         )
         return result
     except HTTPException:

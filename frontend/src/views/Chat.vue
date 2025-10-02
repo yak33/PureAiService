@@ -8,11 +8,25 @@
             <a-select
               v-model:value="currentModel"
               size="small"
-              style="width: 200px"
+              style="width: 240px"
+              placeholder="选择AI模型"
+              :loading="loadingModels"
+              show-search
+              :filter-option="filterOption"
             >
-              <a-select-option value="zai-org/GLM-4.5">GLM-4.5 (推荐)</a-select-option>
-              <a-select-option value="moonshotai/Kimi-K2-Instruct-0905">Kimi-K2</a-select-option>
+              <a-select-option 
+                v-for="model in availableModels" 
+                :key="model.id" 
+                :value="model.id"
+              >
+                {{ model.id }}
+              </a-select-option>
             </a-select>
+            <a-tooltip title="如果没有可用模型，请先在模型管理页面配置">
+              <a-button size="small" type="link" v-if="!loadingModels && availableModels.length === 0" danger>
+                ⚠️ 无可用模型
+              </a-button>
+            </a-tooltip>
             <a-button size="small" @click="clearChat">
               <DeleteOutlined />
               <span>清空对话</span>
@@ -141,6 +155,7 @@ import {
   SendOutlined,
   SettingOutlined
 } from '@ant-design/icons-vue'
+import { getCachedModels, setCachedModels } from '../utils/modelCache'
 
 export default {
   name: 'Chat',
@@ -157,7 +172,9 @@ export default {
       messages: [],
       inputMessage: '',
       loading: false,
-      currentModel: 'zai-org/GLM-4.5',
+      loadingModels: false,
+      availableModels: [],
+      currentModel: '',
       showAdvanced: [],
       settings: {
         systemPrompt: '',
@@ -166,10 +183,50 @@ export default {
       }
     }
   },
-  mounted() {
+  async mounted() {
+    await this.loadAvailableModels()
     this.loadChatHistory()
   },
   methods: {
+    async loadAvailableModels() {
+      // 先尝试从缓存读取
+      const cachedModels = getCachedModels()
+      if (cachedModels && cachedModels.length > 0) {
+        this.availableModels = cachedModels
+        if (!this.currentModel) {
+          const glmModel = this.availableModels.find(m => 
+            m.id.includes('GLM-4') && !m.id.includes('V') && !m.id.includes('Vision')
+          )
+          this.currentModel = glmModel ? glmModel.id : this.availableModels[0].id
+        }
+        return
+      }
+
+      // 缓存不存在或过期，从后端加载
+      this.loadingModels = true
+      try {
+        const response = await aiService.getModels()
+        if (response.data.models && response.data.models.length > 0) {
+          this.availableModels = response.data.models
+          // 保存到缓存
+          setCachedModels(this.availableModels)
+          // 优先选择GLM-4.5（非视觉模型），如果不存在则选择第一个
+          if (!this.currentModel && this.availableModels.length > 0) {
+            const glmModel = this.availableModels.find(m => 
+              m.id.includes('GLM-4') && !m.id.includes('V') && !m.id.includes('Vision')
+            )
+            this.currentModel = glmModel ? glmModel.id : this.availableModels[0].id
+          }
+        }
+      } catch (error) {
+        console.error('加载模型列表失败:', error)
+      } finally {
+        this.loadingModels = false
+      }
+    },
+    filterOption(input, option) {
+      return option.value.toLowerCase().includes(input.toLowerCase())
+    },
     async sendMessage() {
       if (!this.inputMessage.trim() || this.loading) return
 

@@ -32,7 +32,7 @@
                   {{ model.id }}
                 </a-select-option>
               </a-select>
-              <div v-if="availableModels.length === 0" style="margin-top: 8px;">
+              <div v-if="!loadingModels && availableModels.length === 0" style="margin-top: 8px;">
                 <a-alert type="warning" message="请先在模型管理页面配置可用模型" show-icon />
               </div>
             </a-form-item>
@@ -101,18 +101,24 @@
             </div>
           </div>
 
+          <div v-else-if="error" class="result-placeholder">
+            <a-result
+              status="error"
+              title="分析失败"
+              :sub-title="error"
+            >
+              <template #extra>
+                <a-button type="primary" @click="error = null">
+                  知道了
+                </a-button>
+              </template>
+            </a-result>
+          </div>
+
           <div v-else class="result-placeholder">
             <a-empty description="请先提交文本以查看分析结果" />
           </div>
         </a-card>
-
-        <a-alert
-          v-if="error"
-          type="error"
-          show-icon
-          class="error-alert"
-          :message="error"
-        />
       </a-col>
     </a-row>
   </div>
@@ -122,6 +128,7 @@
 import { aiService } from '../services/api'
 import { message } from 'ant-design-vue'
 import { CopyOutlined, HighlightOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { getCachedModels, setCachedModels } from '../utils/modelCache'
 
 export default {
   name: 'TextAnalysis',
@@ -150,14 +157,33 @@ export default {
   },
   methods: {
     async loadAvailableModels() {
+      // 先尝试从缓存读取
+      const cachedModels = getCachedModels()
+      if (cachedModels && cachedModels.length > 0) {
+        this.availableModels = cachedModels
+        if (!this.form.model) {
+          const glmModel = this.availableModels.find(m => 
+            m.id.includes('GLM-4') && !m.id.includes('V') && !m.id.includes('Vision')
+          )
+          this.form.model = glmModel ? glmModel.id : this.availableModels[0].id
+        }
+        return
+      }
+
+      // 缓存不存在或过期，从后端加载
       this.loadingModels = true
       try {
         const response = await aiService.getModels()
         if (response.data.models && response.data.models.length > 0) {
           this.availableModels = response.data.models
-          // 设置默认模型为第一个
+          // 保存到缓存
+          setCachedModels(this.availableModels)
+          // 优先选择GLM-4.5（非视觉模型），如果不存在则选择第一个
           if (!this.form.model && this.availableModels.length > 0) {
-            this.form.model = this.availableModels[0].id
+            const glmModel = this.availableModels.find(m => 
+              m.id.includes('GLM-4') && !m.id.includes('V') && !m.id.includes('Vision')
+            )
+            this.form.model = glmModel ? glmModel.id : this.availableModels[0].id
           }
         }
       } catch (error) {
@@ -193,13 +219,13 @@ export default {
           this.result = response.data
           message.success('文本分析完成')
         } else {
-          this.error = response.data.error || '分析失败'
-          message.error('分析失败')
+          const errorMsg = response.data.error || '分析失败'
+          this.error = `${errorMsg}。可能模型不适配，请切换其他模型。`
         }
       } catch (error) {
         console.error('分析请求失败:', error)
-        this.error = error.response?.data?.detail || '网络请求失败'
-        message.error('分析请求失败')
+        const errorMsg = error.response?.data?.detail || '网络请求失败'
+        this.error = `${errorMsg}。可能模型不适配，请切换其他模型。`
       } finally {
         this.loading = false
       }
@@ -278,9 +304,5 @@ export default {
   align-items: center;
   justify-content: center;
   min-height: 240px;
-}
-
-.error-alert {
-  margin-top: 16px;
 }
 </style>

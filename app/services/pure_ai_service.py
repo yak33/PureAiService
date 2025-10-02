@@ -446,7 +446,8 @@ class PureAIService:
         self,
         image_base64: str,
         language: str = "auto",
-        detail_level: str = "high"
+        detail_level: str = "high",
+        model: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         通过视觉语言模型进行OCR识别
@@ -455,6 +456,7 @@ class PureAIService:
             image_base64: Base64编码的图片数据
             language: 识别语言，支持 auto(自动)、zh(中文)、en(英文)、mix(中英文混合)
             detail_level: 识别精度，支持 high(高精度)、medium(标准精度)、low(快速识别)
+            model: 视觉模型名称，如果未指定则返回错误
             
         Returns:
             Dict[str, Any]: OCR识别结果
@@ -542,7 +544,8 @@ class PureAIService:
         code: Optional[str] = None,
         task: str = "review",
         language: Optional[str] = None,
-        requirements: Optional[str] = None
+        requirements: Optional[str] = None,
+        model: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         代码辅助功能
@@ -553,6 +556,7 @@ class PureAIService:
                   debug(调试)、generate(生成)、convert(转换)、test(测试)、document(文档)等
             language: 编程语言类型，如 Python、JavaScript、Java 等
             requirements: 具体需求描述，用于代码生成或特定任务的详细要求
+            model: AI模型名称，如果未指定则返回错误
             
         Returns:
             Dict[str, Any]: 代码辅助结果

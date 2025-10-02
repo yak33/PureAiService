@@ -26,6 +26,27 @@
               </a-upload-dragger>
             </a-form-item>
 
+            <a-form-item label="图像编辑模型">
+              <a-select 
+                v-model:value="form.model" 
+                placeholder="选择图像编辑模型" 
+                :loading="loadingModels"
+                show-search
+                :filter-option="filterOption"
+              >
+                <a-select-option 
+                  v-for="model in editModels" 
+                  :key="model.id" 
+                  :value="model.id"
+                >
+                  {{ model.id }}
+                </a-select-option>
+              </a-select>
+              <div v-if="!loadingModels && editModels.length === 0" style="margin-top: 8px;">
+                <a-alert type="warning" message="请先在模型管理页面配置图像编辑模型" show-icon />
+              </div>
+            </a-form-item>
+
             <a-form-item label="编辑指令">
               <a-textarea
                 v-model:value="form.instruction"
@@ -88,7 +109,7 @@
           <div v-if="editedImageUrl" class="result-content">
             <div class="result-meta">
               <a-tag color="success">编辑成功</a-tag>
-              <a-tag color="processing">模型: Qwen-Image-Edit-2509</a-tag>
+              <a-tag color="processing">模型: {{ form.model || 'Qwen-Image-Edit-2509' }}</a-tag>
               <a-tag color="cyan" v-if="result.seed">
                 随机种子: {{ result.seed }}
               </a-tag>
@@ -109,12 +130,24 @@
             </div>
           </div>
 
+          <div v-else-if="error" class="result-placeholder">
+            <a-result
+              status="error"
+              title="编辑失败"
+              :sub-title="error"
+            >
+              <template #extra>
+                <a-button type="primary" @click="error = null">
+                  知道了
+                </a-button>
+              </template>
+            </a-result>
+          </div>
+
           <div v-else class="result-placeholder">
             <a-empty description="请上传图片并输入编辑指令" />
           </div>
         </a-card>
-
-        <a-alert v-if="error" type="error" show-icon class="error-alert" :message="error" />
       </a-col>
     </a-row>
 
@@ -189,6 +222,7 @@ import {
   EyeOutlined,
   ReloadOutlined
 } from '@ant-design/icons-vue'
+import { getCachedModels, setCachedModels } from '../utils/modelCache'
 
 export default {
   name: 'ImageEdit',
@@ -203,8 +237,11 @@ export default {
   data() {
     return {
       loading: false,
+      loadingModels: false,
+      editModels: [],
       form: {
-        instruction: ''
+        instruction: '',
+        model: ''
       },
       imageFile: null,
       imagePreview: null,
@@ -224,6 +261,9 @@ export default {
         '改成夜景'
       ]
     }
+  },
+  async mounted() {
+    await this.loadAvailableModels()
   },
   computed: {
     canEdit() {
@@ -247,6 +287,47 @@ export default {
     }
   },
   methods: {
+    async loadAvailableModels() {
+      // 先尝试从缓存读取
+      const cachedModels = getCachedModels()
+      if (cachedModels && cachedModels.length > 0) {
+        // 筛选出图像编辑模型（包含 Edit 的模型）
+        this.editModels = cachedModels.filter(m => 
+          m.id.includes('Edit') || m.id.includes('edit')
+        )
+        if (!this.form.model && this.editModels.length > 0) {
+          // 优先选择 Qwen-Image-Edit
+          const qwenEditModel = this.editModels.find(m => m.id.includes('Qwen-Image-Edit'))
+          this.form.model = qwenEditModel ? qwenEditModel.id : this.editModels[0].id
+        }
+        return
+      }
+
+      // 缓存不存在或过期，从后端加载
+      this.loadingModels = true
+      try {
+        const response = await aiService.getModels()
+        if (response.data.models && response.data.models.length > 0) {
+          setCachedModels(response.data.models)
+          // 筛选出图像编辑模型
+          this.editModels = response.data.models.filter(m => 
+            m.id.includes('Edit') || m.id.includes('edit')
+          )
+          if (!this.form.model && this.editModels.length > 0) {
+            // 优先选择 Qwen-Image-Edit
+            const qwenEditModel = this.editModels.find(m => m.id.includes('Qwen-Image-Edit'))
+            this.form.model = qwenEditModel ? qwenEditModel.id : this.editModels[0].id
+          }
+        }
+      } catch (error) {
+        console.error('加载模型列表失败:', error)
+      } finally {
+        this.loadingModels = false
+      }
+    },
+    filterOption(input, option) {
+      return option.value.toLowerCase().includes(input.toLowerCase())
+    },
     handleBeforeUpload(file) {
       if (file.size > 10 * 1024 * 1024) {
         message.error('文件大小不能超过 10MB')
@@ -287,6 +368,9 @@ export default {
         const formData = new FormData()
         formData.append('file', this.imageFile)
         formData.append('instruction', this.form.instruction)
+        if (this.form.model) {
+          formData.append('model', this.form.model)
+        }
 
         const response = await aiService.editImage(formData)
 
@@ -305,13 +389,24 @@ export default {
           
           message.success('图片编辑完成！')
         } else {
-          this.error = response.data.error || '编辑失败'
-          message.error('编辑失败')
+          // 显示详细的错误信息
+          let errorMsg = response.data.error || '编辑失败'
+          
+          // 如果是内容敏感错误，追加中文提示
+          if (errorMsg.includes('prohibited') || errorMsg.includes('sensitive')) {
+            errorMsg = errorMsg + '\n\n提示：图片或指令包含敏感内容，请调整后重试'
+            message.error('图片或指令包含敏感内容，请调整后重试', 5)
+          } else {
+            message.error(errorMsg, 5)
+          }
+          
+          this.error = errorMsg
         }
       } catch (error) {
         console.error('编辑请求失败:', error)
-        this.error = error.response?.data?.detail || '网络请求失败'
-        message.error('编辑请求失败')
+        const errorMsg = error.response?.data?.detail || error.response?.data?.error || '网络请求失败'
+        this.error = errorMsg
+        message.error(errorMsg, 5)
       } finally {
         this.loading = false
       }

@@ -5,7 +5,7 @@
         <a-card class="form-card" title="📷 文字识别 (OCR)">
           <a-form :model="form" layout="vertical">
             <a-row :gutter="20">
-              <a-col :span="24" :md="12">
+              <a-col :span="24" :md="8">
                 <a-form-item label="识别语言">
                   <a-select v-model:value="form.language" placeholder="选择识别语言">
                     <a-select-option value="auto">自动识别</a-select-option>
@@ -16,13 +16,36 @@
                 </a-form-item>
               </a-col>
 
-              <a-col :span="24" :md="12">
+              <a-col :span="24" :md="8">
                 <a-form-item label="识别精度">
                   <a-select v-model:value="form.detailLevel" placeholder="选择识别精度">
                     <a-select-option value="high">高精度（慢）</a-select-option>
                     <a-select-option value="medium">标准精度</a-select-option>
                     <a-select-option value="low">快速识别</a-select-option>
                   </a-select>
+                </a-form-item>
+              </a-col>
+
+              <a-col :span="24" :md="8">
+                <a-form-item label="视觉模型">
+                  <a-select 
+                    v-model:value="form.model" 
+                    placeholder="选择视觉模型" 
+                    :loading="loadingModels"
+                    show-search
+                    :filter-option="filterOption"
+                  >
+                    <a-select-option 
+                      v-for="model in visionModels" 
+                      :key="model.id" 
+                      :value="model.id"
+                    >
+                      {{ model.id }}
+                    </a-select-option>
+                  </a-select>
+                  <div v-if="!loadingModels && visionModels.length === 0" style="margin-top: 8px;">
+                    <a-alert type="warning" message="请先在模型管理页面配置视觉模型" show-icon />
+                  </div>
                 </a-form-item>
               </a-col>
             </a-row>
@@ -79,6 +102,7 @@
             <div class="result-meta">
               <a-tag color="processing">语言: {{ form.language }}</a-tag>
               <a-tag color="success">精度: {{ form.detailLevel }}</a-tag>
+              <a-tag color="cyan" v-if="form.model">模型: {{ form.model }}</a-tag>
               <a-tag color="warning" v-if="result.usage">
                 Token: {{ result.usage.total_tokens || '未知' }}
               </a-tag>
@@ -94,12 +118,24 @@
             </div>
           </div>
 
+          <div v-else-if="error" class="result-placeholder">
+            <a-result
+              status="error"
+              title="识别失败"
+              :sub-title="error"
+            >
+              <template #extra>
+                <a-button type="primary" @click="error = null">
+                  知道了
+                </a-button>
+              </template>
+            </a-result>
+          </div>
+
           <div v-else class="result-placeholder">
             <a-empty description="请先上传图片并开始识别" />
           </div>
         </a-card>
-
-        <a-alert v-if="error" type="error" show-icon class="error-alert" :message="error" />
       </a-col>
     </a-row>
 
@@ -122,6 +158,7 @@ import {
   CopyOutlined,
   DownloadOutlined
 } from '@ant-design/icons-vue'
+import { getCachedModels, setCachedModels } from '../utils/modelCache'
 
 export default {
   name: 'OCR',
@@ -135,9 +172,12 @@ export default {
   data() {
     return {
       loading: false,
+      loadingModels: false,
+      visionModels: [],
       form: {
         language: 'auto',
-        detailLevel: 'medium'
+        detailLevel: 'medium',
+        model: ''
       },
       imageFile: null,
       imagePreview: null,
@@ -146,7 +186,51 @@ export default {
       processingTime: 0
     }
   },
+  async mounted() {
+    await this.loadAvailableModels()
+  },
   methods: {
+    async loadAvailableModels() {
+      // 先尝试从缓存读取
+      const cachedModels = getCachedModels()
+      if (cachedModels && cachedModels.length > 0) {
+        // 筛选出视觉模型（包含 V 或 Vision 的模型）
+        this.visionModels = cachedModels.filter(m => 
+          m.id.includes('V') || m.id.includes('Vision') || m.id.includes('vision')
+        )
+        if (!this.form.model && this.visionModels.length > 0) {
+          // 优先选择 GLM-4V
+          const glmVisionModel = this.visionModels.find(m => m.id.includes('GLM-4V'))
+          this.form.model = glmVisionModel ? glmVisionModel.id : this.visionModels[0].id
+        }
+        return
+      }
+
+      // 缓存不存在或过期，从后端加载
+      this.loadingModels = true
+      try {
+        const response = await aiService.getModels()
+        if (response.data.models && response.data.models.length > 0) {
+          setCachedModels(response.data.models)
+          // 筛选出视觉模型
+          this.visionModels = response.data.models.filter(m => 
+            m.id.includes('V') || m.id.includes('Vision') || m.id.includes('vision')
+          )
+          if (!this.form.model && this.visionModels.length > 0) {
+            // 优先选择 GLM-4V
+            const glmVisionModel = this.visionModels.find(m => m.id.includes('GLM-4V'))
+            this.form.model = glmVisionModel ? glmVisionModel.id : this.visionModels[0].id
+          }
+        }
+      } catch (error) {
+        console.error('加载模型列表失败:', error)
+      } finally {
+        this.loadingModels = false
+      }
+    },
+    filterOption(input, option) {
+      return option.value.toLowerCase().includes(input.toLowerCase())
+    },
     /**
      * 处理文件上传前的验证
      * @param {File} file - 用户选择的文件
@@ -225,6 +309,9 @@ export default {
         formData.append('file', this.imageFile)
         formData.append('language', this.form.language)
         formData.append('detail_level', this.form.detailLevel)
+        if (this.form.model) {
+          formData.append('model', this.form.model)
+        }
 
         const response = await aiService.ocr(formData)
 
@@ -234,13 +321,16 @@ export default {
           this.result = response.data
           message.success('文字识别完成')
         } else {
-          this.error = response.data.error || '识别失败'
-          message.error('识别失败')
+          // 显示详细的错误信息
+          const errorMsg = response.data.error || '识别失败'
+          this.error = errorMsg
+          message.error(errorMsg, 5)
         }
       } catch (error) {
         console.error('识别请求失败:', error)
-        this.error = error.response?.data?.detail || '网络请求失败'
-        message.error('识别请求失败')
+        const errorMsg = error.response?.data?.detail || error.response?.data?.error || '网络请求失败'
+        this.error = errorMsg
+        message.error(errorMsg, 5)
       } finally {
         this.loading = false
       }
