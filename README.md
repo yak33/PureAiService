@@ -123,7 +123,7 @@ ai-service/
 
 ### 1. 克隆项目
 ```bash
-git clone https://github.com/yourusername/ai-service.git
+git clone https://github.com/yak33/ai-service.git
 cd ai-service
 ```
 
@@ -192,28 +192,22 @@ JWT_EXPIRE_MINUTES=1440
 
 ## 🚀 启动服务
 
-### 🎯 完整服务启动（前端+后端）
+### 🎯 开发模式（推荐）
 
-#### 方式1：一键启动（推荐）
-```bash
-# 1. 构建前端
-cd frontend
-pnpm build  # 或 npm run build
+适用于本地开发，支持热重载：
 
-# 2. 启动后端服务（包含前端界面）
-cd ..
-python start.py
-```
-
-#### 方式2：分别启动（开发模式）
 ```bash
 # 终端1：启动后端服务
 python main.py
+# 或
+python start.py
 
 # 终端2：启动前端开发服务器
 cd frontend
 pnpm dev  # 或 npm run dev
 ```
+
+前端会自动在浏览器打开 http://localhost:3000
 
 ### 🔧 仅启动后端API服务
 
@@ -230,15 +224,20 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ### 📱 访问地址
 
-**完整服务（推荐）:**
-- 🎨 **Web界面**: http://localhost:8000 （现代化前端界面）
-- 🔐 **登录页面**: http://localhost:8000/login （首次访问会自动跳转）
+**开发模式（推荐用于本地开发）:**
+- 🎨 **前端界面**: http://localhost:3000 （Vue开发服务器，热重载）
+- 🔌 **后端API**: http://localhost:8000 （FastAPI服务）
 - 📚 **API文档**: http://localhost:8000/docs （可交互测试）
 - 📊 **ReDoc文档**: http://localhost:8000/redoc （只读文档）
 
-**开发模式:**
-- 🎨 **前端开发**: http://localhost:3000 （热重载，自动打开浏览器）
-- 🔌 **后端API**: http://localhost:8000
+> 💡 **说明**: 前端运行在3000端口，通过Vite代理自动调用后端8000端口的API接口
+
+**生产部署（Linux服务器）:**
+- 🎨 **前端界面**: 通过Nginx服务（如 http://your-domain.com 或 http://your-ip:80）
+- 🔌 **后端API**: 8000端口（通过Nginx反向代理到 `/api` 路径）
+- 📚 **API文档**: http://your-domain.com/docs
+
+> 💡 **部署说明**: 前端静态文件由Nginx直接服务，API请求通过Nginx代理到后端8000端口
 
 **默认账号:**
 - 👤 用户名: `admin`
@@ -247,7 +246,10 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ## 🎯 快速开始
 
 ### 1. 登录系统
-访问 http://localhost:8000，使用默认账号登录
+- **开发模式**: 访问 http://localhost:3000 （前端自动代理后端8000端口）
+- **生产环境**: 访问你的域名或服务器IP（由Nginx配置）
+
+使用默认账号登录
 
 ### 2. 配置模型（必须）
 1. 点击导航栏的"模型管理"菜单
@@ -260,189 +262,6 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 配置完模型后，即可使用各项AI功能：
 - 文本分析、代码助手、智能对话等
 
-## 📚 API接口
-
-### 🔐 认证接口
-
-#### 用户注册
-```python
-POST /api/v1/auth/register
-{
-    "username": "testuser",
-    "nickname": "测试用户（可选）",
-    "password": "password123",
-    "confirm_password": "password123"
-}
-```
-
-#### 用户登录
-```python
-POST /api/v1/auth/login
-{
-    "username": "admin",
-    "password": "123456"
-}
-
-# 响应
-{
-    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "token_type": "bearer",
-    "expires_in": 1440,
-    "nickname": "管理员"
-}
-```
-
-#### 更新用户信息
-```python
-PUT /api/v1/auth/profile
-Authorization: Bearer <token>
-{
-    "nickname": "新昵称（可选）",
-    "old_password": "旧密码（修改密码时必填）",
-    "new_password": "新密码（可选）"
-}
-```
-
-#### 获取当前用户信息
-```python
-GET /api/v1/auth/me
-Authorization: Bearer <token>
-```
-
-### 1. 文本分析
-```python
-POST /api/v1/ai/text/analyze
-{
-    "text": "要分析的文本",
-    "task": "analyze",  # 可选: analyze, summarize, extract, translate, sentiment, classify, keywords
-    "custom_prompt": "自定义提示词（可选）",
-    "model": "模型ID（可选）"
-}
-```
-
-### 2. 代码辅助
-```python
-POST /api/v1/ai/code
-{
-    "code": "源代码（可选）",
-    "task": "review",  # 可选: review, optimize, explain, debug, generate, convert, test, document
-    "language": "Python",
-    "requirements": "具体要求"
-}
-```
-
-### 3. 对话接口
-```python
-POST /api/v1/ai/chat
-{
-    "messages": [
-        {"role": "user", "content": "你好"}
-    ],
-    "system_prompt": "系统提示词（可选）",
-    "model": "模型ID（可选）",
-    "temperature": 0.7,
-    "max_tokens": 2000
-}
-```
-
-### 4. OCR识别（通过视觉模型）
-```python
-POST /api/v1/ai/ocr
-FormData:
-- file: 图片文件
-- language: auto/zh/en/mix
-- detail_level: high/medium/low
-```
-
-### 5. 图像描述生成
-```python
-POST /api/v1/ai/image/describe
-{
-    "prompt": "简单描述",
-    "model": "zai-org/GLM-4.5",
-    "style": "realistic",  # 可选: realistic, artistic, cartoon
-    "n": 1
-}
-```
-
-### 6. 快速AI调用
-```python
-POST /api/v1/ai/quick
-{
-    "prompt": "直接输入提示词",
-    "model": "模型ID（可选）"
-}
-```
-
-### 7. 批量处理
-```python
-POST /api/v1/ai/batch
-{
-    "tasks": [
-        {
-            "id": "task1",
-            "type": "text",
-            "text": "文本内容",
-            "task": "analyze"
-        },
-        {
-            "id": "task2",
-            "type": "code",
-            "code": "代码内容",
-            "task": "review"
-        }
-    ]
-}
-```
-
-### 8. 图片编辑 ✨ (新增)
-```python
-POST /api/v1/ai/image/edit
-FormData:
-- file: 图片文件
-- instruction: 编辑指令（自然语言描述）
-
-# 示例指令：
-# - "将背景改成海滩"
-# - "去掉图片中的文字"
-# - "改成黑白照片"
-# - "添加日落效果"
-```
-
-### 9. 获取模型列表
-```python
-# 获取已配置的模型列表
-GET /api/v1/ai/models
-
-# 获取平台所有可用模型
-GET /api/v1/ai/platform/models?type=text&sub_type=chat
-
-# 获取平台用户信息
-GET /api/v1/ai/platform/user-info
-
-# 获取模型配置
-GET /api/v1/ai/models-config
-
-# 保存模型配置
-POST /api/v1/ai/models-config
-[
-  {
-    "id": "zai-org/GLM-4.5",
-    "object": "model",
-    "created": 0,
-    "owned_by": ""
-  }
-]
-```
-
-## 🧪 测试
-
-运行测试脚本：
-```bash
-# 确保服务已启动，然后运行
-python test_ai_service.py
-```
-
 ## 📊 支持的模型
 
 ### 动态模型配置 🆕
@@ -454,8 +273,6 @@ python test_ai_service.py
 **文本对话模型：**
 - `zai-org/GLM-4.5` - 智谱AI对话模型（推荐）
 - `moonshotai/Kimi-K2-Instruct-0905` - Moonshot AI对话模型
-- `deepseek-ai/DeepSeek-V3` - DeepSeek 对话模型
-- `Qwen/Qwen2.5-72B-Instruct` - 通义千问对话模型
 
 **视觉模型：**
 - `zai-org/GLM-4.5V` - 智谱AI视觉语言模型（OCR识别）
@@ -468,50 +285,6 @@ python test_ai_service.py
   - 基于自然语言指令的智能编辑
 
 **注意：** 模型可用性和免费额度可能随时变化，请以硅基流动平台实际为准。建议在模型管理页面勾选"仅显示免费模型"来过滤付费模型。
-
-## 💡 使用示例
-
-### Python示例
-```python
-import requests
-
-# 文本分析
-response = requests.post(
-    "http://localhost:8000/api/v1/ai/text/analyze",
-    json={
-        "text": "人工智能正在改变世界",
-        "task": "sentiment"
-    }
-)
-print(response.json())
-
-# 代码生成
-response = requests.post(
-    "http://localhost:8000/api/v1/ai/code",
-    json={
-        "task": "generate",
-        "language": "Python",
-        "requirements": "写一个快速排序算法"
-    }
-)
-print(response.json())
-```
-
-### cURL示例
-```bash
-# 快速AI调用
-curl -X POST http://localhost:8000/api/v1/ai/quick \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "解释什么是区块链"}'
-
-# 图片编辑 ✨
-curl -X POST http://localhost:8000/api/v1/ai/image/edit \
-  -F "file=@image.jpg" \
-  -F "instruction=将背景改成海滩"
-
-# 获取模型列表
-curl http://localhost:8000/api/v1/ai/models
-```
 
 ## 📝 注意事项
 
@@ -565,149 +338,18 @@ curl http://localhost:8000/api/v1/ai/models
 - **页面无法访问**: 检查端口是否被占用、确认后端服务已启动、检查代理配置
 - **API请求失败**: 确认后端服务运行正常、检查网络连接、查看浏览器控制台错误信息
 
-### 常见解决方案
-```bash
-# 清理并重新安装依赖
-cd frontend
-rm -rf node_modules package-lock.json
-pnpm install
-
-# 重新构建前端
-pnpm build
-
-# 重启完整服务
-cd ..
-python start.py
-```
-
-## 📄 许可证
-
-MIT License
-
-## 🐳 Docker 部署
-
-### 开发环境部署
-
-适用于本地开发和测试：
-
-```bash
-# 1. 配置环境变量
-cp .env.example .env
-# 编辑 .env 文件，填入真实的 API 密钥
-
-# 2. 启动服务
-docker compose up -d
-
-# 3. 查看服务状态
-docker compose ps
-
-# 4. 查看日志
-docker compose logs -f
-```
-
-访问地址：
-- 🎨 前端界面: http://localhost:8080
-- 🔌 后端API: http://localhost:8000
-
-### 生产环境部署（云服务器）
-
-适用于 CentOS 7.9 等 Linux 服务器：
-
-#### 快速部署
-
-```bash
-# 1. 赋予部署脚本执行权限
-chmod +x deploy.sh
-
-# 2. 执行部署
-./deploy.sh deploy
-```
-
-#### 手动部署
-
-```bash
-# 1. 配置环境变量
-cp .env.production .env
-vim .env  # 填入真实配置
-
-# 2. 创建必要目录
-mkdir -p data logs temp_uploads
-
-# 3. 构建并启动服务
-docker compose -f docker-compose.prod.yml up -d
-
-# 4. 配置宿主机 nginx 反向代理
-sudo cp nginx-host.conf /etc/nginx/conf.d/pure-ai-service.conf
-sudo vim /etc/nginx/conf.d/pure-ai-service.conf  # 修改域名
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-#### 常用运维命令
-
-```bash
-# 查看服务状态
-./deploy.sh status
-
-# 查看日志
-./deploy.sh logs
-./deploy.sh logs backend  # 只看后端日志
-
-# 重启服务
-./deploy.sh restart
-
-# 更新服务
-./deploy.sh update
-
-# 备份数据
-./deploy.sh backup
-
-# 停止服务
-./deploy.sh stop
-```
-
-### Docker 部署说明
-
-详细的部署文档请参考：
-- 📖 [完整部署指南](DEPLOYMENT.md) - 包含环境要求、部署步骤、故障排查等
-- 🔧 [部署脚本说明](deploy.sh) - 自动化部署工具
-- 🌐 [Nginx 配置示例](nginx-host.conf) - 反向代理配置
-
-**配置文件说明：**
-- `Dockerfile` - 后端镜像构建文件
-- `docker-compose.yml` - 开发环境编排配置
-- `docker-compose.prod.yml` - 生产环境编排配置
-- `frontend/Dockerfile` - 前端镜像构建文件
-- `frontend/nginx.conf` - 前端容器内 nginx 配置
-
 ## 🤝 贡献
 
 我们欢迎并感谢所有形式的贡献！
 
 ### 如何贡献
 
-1. 🐛 **报告Bug** - 在 [Issues](https://github.com/yourusername/PureAiService/issues) 中提交问题
+1. 🐛 **报告Bug** - 在 [Issues](https://github.com/yak33/PureAiService/issues) 中提交问题
 2. 💡 **提出建议** - 分享你的想法和改进建议
 3. 📝 **改进文档** - 帮助完善文档和示例
 4. 🔧 **提交代码** - Fork 项目并提交 Pull Request
 
 详细的贡献指南请查看 [CONTRIBUTING.md](CONTRIBUTING.md)
-
-### 开发流程
-
-```bash
-# 1. Fork 并克隆项目
-git clone https://github.com/your-username/PureAiService.git
-
-# 2. 创建功能分支
-git checkout -b feature/your-feature
-
-# 3. 提交更改
-git commit -m "✨ feat: 你的功能描述"
-
-# 4. 推送并创建 Pull Request
-git push origin feature/your-feature
-```
 
 ## 👨‍💻 作者
 
@@ -732,8 +374,8 @@ git push origin feature/your-feature
 
 ## 📞 联系方式
 
-- 📧 提交 [Issue](https://github.com/yourusername/PureAiService/issues)
-- 💬 参与 [讨论](https://github.com/yourusername/PureAiService/discussions)
+- 📧 提交 [Issue](https://github.com/yak33/PureAiService/issues)
+- 💬 参与 [讨论](https://github.com/yak33/PureAiService/discussions)
 
 ---
 
