@@ -14,6 +14,7 @@ import OCR from './views/OCR.vue'
 import ImageDescription from './views/ImageDescription.vue'
 import ImageEdit from './views/ImageEdit.vue'
 import ModelsManagement from './views/ModelsManagement.vue'
+import NotFound from './views/NotFound.vue'
 
 const routes = [
   { path: '/login', component: Login, meta: { public: true } },
@@ -24,7 +25,9 @@ const routes = [
   { path: '/ocr', component: OCR },
   { path: '/image', component: ImageDescription },
   { path: '/image-edit', component: ImageEdit },
-  { path: '/models', component: ModelsManagement }
+  { path: '/models', component: ModelsManagement },
+  // 404 页面 - 必须放在最后
+  { path: '/:pathMatch(.*)*', component: NotFound }
 ]
 
 const router = createRouter({
