@@ -1,7 +1,7 @@
 {
   "name": "ai-service-frontend",
   "version": "1.0.0",
-  "description": "AI服务前端界面",
+  "description": "AI 服务平台前端界面",
   "packageManager": "pnpm@10.17.0",
   "engines": {
     "node": ">=16",

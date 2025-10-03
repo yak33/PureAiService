@@ -1,48 +1,43 @@
-# 纯AI服务 (Pure AI Service)
+# AI 服务平台 (Pure AI Service)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Vue 3](https://img.shields.io/badge/vue-3.x-green.svg)](https://vuejs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688.svg)](https://fastapi.tiangolo.com/)
 
 一个完全基于大模型API实现的AI服务，不依赖任何文档处理库（如PyPDF2、python-docx等），所有功能都通过调用大模型API来实现。
 
+## 📖 文档
+
+- [贡献指南](CONTRIBUTING.md)
+- [行为准则](CODE_OF_CONDUCT.md)
+- [更新日志](CHANGELOG.md)
+- [许可证](LICENSE)
+
 ## 🌟 特性
 
-- **纯AI驱动**: 所有功能通过大模型API实现，无需第三方处理库
+- **纯AI驱动**: 所有功能通过大模型API实现，无需第三方处理库。实时显示硅基流动平台账户余额和状态。
 - **动态模型管理**: 从硅基流动平台获取模型列表，用户自主选择配置可用模型 🆕
 - **功能丰富**: 文本分析、代码辅助、智能对话、OCR识别、图像描述、**AI图片编辑**等
 - **用户认证系统**: 完整的JWT认证、用户注册登录、滑动验证码保护
-- **账户信息展示**: 实时显示硅基流动平台账户余额和状态 🆕
 - **现代化前端**: 基于 Vue 3 + Ant Design Vue 的美观Web界面
 - **请求日志**: 完整记录所有API请求和响应，便于调试 🆕
-- **简单易用**: RESTful API设计，易于集成
-- **高度可扩展**: 轻松添加新的AI功能
+- **高度可扩展**: 轻松添加新的 AI 功能
 - **极简架构**: 只保留必要的文件和依赖
 - **高可靠调用**: 后端使用异步 `httpx` 调用硅基流动 API，支持流式响应并强化错误处理
 
 ## 🆕 最新功能 (2025-10-02)
 
-### 🎯 动态模型管理系统
-- **模型列表获取**: 从硅基流动平台实时获取所有可用模型
-- **自主配置**: 用户可自行选择并启用需要的模型
-- **筛选搜索**: 支持按类型、子类型筛选，支持模型名称模糊搜索
-- **免费模型过滤**: 一键过滤 Pro/ 开头的付费模型
-- **配置持久化**: 模型配置保存到 data/models_config.json
-- **全局使用**: 所有功能页面自动从配置文件读取可用模型
-- **图片编辑增强**: 敏感内容错误时显示中文友好提示，并在结果区域内展示详细错误信息
-
+### 🎯 动态模型配置
+- **模型列表获取及自主配置**: 从硅基流动平台实时获取所有可用模型，可自行选择并启用需要的模型，支持按类型、子类型筛选，支持模型名称模糊搜索。 一键过滤 Pro/ 开头的付费模型。模型配置保存到 data/models_config.json
 ### 💰 账户信息集成
-- **实时余额显示**: 导航栏显示硅基流动平台账户余额
-- **账户状态监控**: 显示账户状态（正常/异常）
-- **自动刷新**: 路由切换时自动更新账户信息
+- **实时余额账户状态监控**: 导航栏显示硅基流动平台账户余额，显示账户状态（正常/异常），路由切换时自动更新账户信息
 
 ### 📊 请求响应日志
-- **完整记录**: 记录所有API请求参数和响应内容
-- **格式化输出**: JSON数据美化显示，便于阅读
-- **性能监控**: 显示每个请求的处理时间
-- **请求追踪**: 通过Request-ID关联请求和响应
+- **完整记录**: 记录所有API请求参数和响应内容，显示每个请求的处理时间，格式化输出
 
 ### 🎨 UI/UX优化
 - **首页模型滚动展示**: 动态滚动显示所有配置的模型，替代单一数字
-- **Logo点击跳转**: 点击左上角Logo快速返回首页
-- **移除首页菜单**: 优化导航栏布局，更加简洁
-- **浏览器图标**: 添加漂亮的渐变色AI图标
 
 ### ⚙️ 配置优化
 - **移除默认模型**: 要求用户必须先配置模型才能使用
@@ -57,7 +52,7 @@ ai-service/
 ├── app/                        # 应用主目录
 │   ├── api/                   # API接口
 │   │   ├── ai_endpoints.py   # AI服务端点
-│   │   ├── auth_endpoints.py # 认证端点 🆕
+│   │   ├── auth_endpoints.py # 认证端点
 │   │   └── __init__.py
 │   │
 │   ├── core/                  # 核心配置
@@ -65,8 +60,8 @@ ai-service/
 │   │   ├── logger.py         # 日志配置
 │   │   ├── auth.py           # JWT认证逻辑
 │   │   ├── user_manager.py   # 用户管理
-│   │   ├── models_config_manager.py  # 模型配置管理器 🆕
-│   │   ├── request_logging_middleware.py  # 请求日志中间件 🆕
+│   │   ├── models_config_manager.py  # 模型配置管理器
+│   │   ├── request_logging_middleware.py  # 请求日志中间件
 │   │   └── __init__.py
 │   │
 │   ├── services/              # 服务层
@@ -97,7 +92,6 @@ ai-service/
 │   ├── vite.config.js       # 构建配置
 │   └── README.md            # 前端说明
 │
-├── static/                    # 前端构建输出（自动生成）
 ├── data/                      # 数据目录
 │   ├── users.json            # 用户数据
 │   └── models_config.json    # 模型配置 🆕
@@ -688,8 +682,59 @@ sudo systemctl reload nginx
 
 ## 🤝 贡献
 
-欢迎提交Issue和Pull Request！
+我们欢迎并感谢所有形式的贡献！
+
+### 如何贡献
+
+1. 🐛 **报告Bug** - 在 [Issues](https://github.com/yourusername/PureAiService/issues) 中提交问题
+2. 💡 **提出建议** - 分享你的想法和改进建议
+3. 📝 **改进文档** - 帮助完善文档和示例
+4. 🔧 **提交代码** - Fork 项目并提交 Pull Request
+
+详细的贡献指南请查看 [CONTRIBUTING.md](CONTRIBUTING.md)
+
+### 开发流程
+
+```bash
+# 1. Fork 并克隆项目
+git clone https://github.com/your-username/PureAiService.git
+
+# 2. 创建功能分支
+git checkout -b feature/your-feature
+
+# 3. 提交更改
+git commit -m "✨ feat: 你的功能描述"
+
+# 4. 推送并创建 Pull Request
+git push origin feature/your-feature
+```
+
+## 👨‍💻 作者
+
+**ZHANGCHAO**
+
+## 📄 许可证
+
+本项目采用 [MIT License](LICENSE) 开源协议。
+
+这意味着你可以自由地：
+- ✅ 商业使用
+- ✅ 修改代码
+- ✅ 分发
+- ✅ 私人使用
+
+但需要：
+- ⚠️ 包含许可证和版权声明
+
+## ⭐ Star History
+
+如果这个项目对你有帮助，请给它一个 Star ⭐️
 
 ## 📞 联系方式
 
-如有问题，请提交Issue或联系维护者。
+- 📧 提交 [Issue](https://github.com/yourusername/PureAiService/issues)
+- 💬 参与 [讨论](https://github.com/yourusername/PureAiService/discussions)
+
+---
+
+**Made with ❤️ by ZHANGCHAO**
