@@ -109,15 +109,16 @@ ai-service/
 ### 📄 核心文件说明
 
 **后端文件：**
-- **main.py**: FastAPI应用主入口，配置中间件和路由，集成前端静态文件服务
+- **main.py**: FastAPI应用主入口，配置中间件和路由
 - **start.py**: 便捷启动脚本，一键运行服务
 - **.env**: 配置API密钥和服务参数
-- **pure_ai_service.py**: 核心AI服务类，所有功能通过大模型API实现
-- **siliconflow_models.py**: 硅基流动平台模型配置（GLM和Kimi）
+- **app/services/pure_ai_service.py**: 核心AI服务类，所有功能通过大模型API实现
+- **app/core/models_config_manager.py**: 动态模型配置管理器
+- **data/models_config.json**: 用户配置的可用模型列表
 
 **前端文件：**
 - **frontend/**: Vue 3前端项目目录
-- **static/**: 前端构建后的静态文件（由后端服务托管）
+- **frontend/dist/**: 前端构建后的静态文件（部署到Nginx）
 
 ## 📦 安装
 
