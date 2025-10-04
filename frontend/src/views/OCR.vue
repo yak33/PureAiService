@@ -578,7 +578,7 @@ export default {
   border: 1px solid #e9ecef;
   border-radius: 6px;
   padding: 16px;
-  max-height: 400px;
+  max-height: 600px;
   overflow-y: auto;
   margin-bottom: 16px;
 }
