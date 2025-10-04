@@ -65,7 +65,7 @@
                   <p class="paste-tip">📋 也可以直接 <strong>Ctrl+V</strong> 粘贴图片</p>
                 </div>
                 <div v-else class="image-preview">
-                  <img :src="imagePreview" alt="预览图片" />
+                  <img :src="imagePreview" alt="预览图片" @click="showImageModal" class="clickable-image" />
                   <div class="image-info">
                     <p>{{ imageFile.name }}</p>
                     <p>{{ formatFileSize(imageFile.size) }}</p>
@@ -152,6 +152,19 @@
         <p>注意：图片的高和宽都必须大于28像素。</p>
       </template>
     </a-alert>
+
+    <!-- 图片预览模态框 -->
+    <a-modal 
+      v-model:open="imageModalVisible" 
+      title="图片预览" 
+      width="80%"
+      :footer="null"
+      centered
+    >
+      <div class="image-modal-content">
+        <img :src="imagePreview" alt="图片预览" class="modal-image" />
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -190,7 +203,8 @@ export default {
       imagePreview: null,
       result: null,
       error: null,
-      processingTime: 0
+      processingTime: 0,
+      imageModalVisible: false
     }
   },
   async mounted() {
@@ -475,6 +489,13 @@ export default {
       }
 
       img.src = objectUrl
+    },
+
+    /**
+     * 显示图片预览模态框
+     */
+    showImageModal() {
+      this.imageModalVisible = true
     }
   }
 }
@@ -541,6 +562,16 @@ export default {
   max-height: 300px;
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.clickable-image {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.clickable-image:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .image-info {
@@ -623,5 +654,17 @@ export default {
 
 :deep(.el-upload-dragger) {
   width: 100%;
+}
+
+.image-modal-content {
+  text-align: center;
+  padding: 20px;
+}
+
+.modal-image {
+  max-width: 100%;
+  max-height: 70vh;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 </style>

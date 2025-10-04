@@ -19,7 +19,7 @@
                   <p class="paste-tip">📋 也可以直接 <strong>Ctrl+V</strong> 粘贴图片</p>
                 </div>
                 <div v-else class="image-preview">
-                  <img :src="imagePreview" alt="原始图片" />
+                  <img :src="imagePreview" alt="原始图片" @click="showImageModal" class="clickable-image" />
                   <div class="image-info">
                     <p>{{ imageFile.name }}</p>
                     <p>{{ formatFileSize(imageFile.size) }}</p>
@@ -210,6 +210,19 @@
         </div>
       </div>
     </a-modal>
+
+    <!-- 图片预览模态框 -->
+    <a-modal 
+      v-model:open="imageModalVisible" 
+      title="图片预览" 
+      width="80%"
+      :footer="null"
+      centered
+    >
+      <div class="image-modal-content">
+        <img :src="imagePreview" alt="图片预览" class="modal-image" />
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -252,6 +265,7 @@ export default {
       result: null,
       error: null,
       compareModalVisible: false,
+      imageModalVisible: false,
       templates: [
         '把背景改成海滩',
         '添加一顶帽子',
@@ -540,6 +554,13 @@ export default {
       this.editedImageDirectUrl = null
       this.result = null
       this.error = null
+    },
+
+    /**
+     * 显示图片预览模态框
+     */
+    showImageModal() {
+      this.imageModalVisible = true
     }
   },
 
@@ -616,6 +637,16 @@ export default {
   max-height: 300px;
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.clickable-image {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.clickable-image:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .image-info {
@@ -744,6 +775,18 @@ export default {
   width: 2px;
   background: linear-gradient(to bottom, #e4e4e4, #1677ff, #e4e4e4);
   align-self: stretch;
+}
+
+.image-modal-content {
+  text-align: center;
+  padding: 20px;
+}
+
+.modal-image {
+  max-width: 100%;
+  max-height: 70vh;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 768px) {
