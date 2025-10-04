@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     default_temperature: float = float(os.getenv("DEFAULT_TEMPERATURE", "0.7"))
     default_max_tokens: int = int(os.getenv("DEFAULT_MAX_TOKENS", "2000"))
     
-    # API超时设置
-    api_timeout: int = int(os.getenv("API_TIMEOUT", "60"))
+    # API超时设置（秒）- 增加到300秒（5分钟）以支持复杂模型处理
+    api_timeout: int = int(os.getenv("API_TIMEOUT", "300"))
     
     # 文件处理（仅用于临时存储）
     max_file_size: int = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB

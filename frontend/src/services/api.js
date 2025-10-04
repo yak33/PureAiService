@@ -1,9 +1,9 @@
 import axios from 'axios'
 
-// 创建axios实例
+// 创建 axios 实例
 const api = axios.create({
   baseURL: '/api/v1',
-  timeout: 60000,
+  timeout: 300000, // 300秒（5分钟）超时，支持复杂模型处理
   headers: {
     'Content-Type': 'application/json'
   }
