@@ -10,11 +10,13 @@
                 :show-upload-list="false" 
                 :before-upload="handleBeforeUpload" 
                 accept="image/*"
+                @paste.native="handlePaste"
               >
                 <div v-if="!imageFile" class="upload-area">
                   <PictureOutlined class="upload-icon" />
                   <p class="upload-text">将图片拖拽到此处，或<em>点击上传</em></p>
                   <p class="upload-tip">支持 JPG、PNG、WebP 格式，文件大小不超过 10MB</p>
+                  <p class="paste-tip">📋 也可以直接 <strong>Ctrl+V</strong> 粘贴图片</p>
                 </div>
                 <div v-else class="image-preview">
                   <img :src="imagePreview" alt="原始图片" />
@@ -264,6 +266,8 @@ export default {
   },
   async mounted() {
     await this.loadAvailableModels()
+    // 添加全局粘贴事件监听
+    window.addEventListener('paste', this.handlePaste)
   },
   computed: {
     canEdit() {
@@ -481,10 +485,67 @@ export default {
       const sizes = ['Bytes', 'KB', 'MB', 'GB']
       const i = Math.floor(Math.log(bytes) / Math.log(k))
       return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
+    },
+
+    /**
+     * 处理粘贴事件
+     * @param {ClipboardEvent} event - 粘贴事件
+     */
+    handlePaste(event) {
+      const items = event.clipboardData?.items
+      if (!items) return
+
+      // 查找图片数据
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.type.indexOf('image') !== -1) {
+          event.preventDefault()
+          const file = item.getAsFile()
+          if (file) {
+            // 使用与上传相同的验证逻辑
+            this.validateAndProcessImage(file)
+            message.success('已粘贴图片')
+          }
+          break
+        }
+      }
+    },
+
+    /**
+     * 验证并处理图片文件
+     * @param {File} file - 图片文件
+     */
+    validateAndProcessImage(file) {
+      // 文件大小验证
+      if (file.size > 10 * 1024 * 1024) {
+        message.error('文件大小不能超过 10MB')
+        return
+      }
+
+      // 文件类型验证
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+      if (!allowedTypes.includes(file.type)) {
+        message.error('只支持 JPG、PNG、WebP 格式的图片')
+        return
+      }
+
+      // 处理图片
+      if (this.imagePreview) {
+        URL.revokeObjectURL(this.imagePreview)
+      }
+
+      this.imageFile = file
+      this.imagePreview = URL.createObjectURL(file)
+      this.editedImage = null
+      this.editedImageDirectUrl = null
+      this.result = null
+      this.error = null
     }
   },
 
   beforeUnmount() {
+    // 移除事件监听
+    window.removeEventListener('paste', this.handlePaste)
     if (this.imagePreview) {
       URL.revokeObjectURL(this.imagePreview)
     }
@@ -528,6 +589,21 @@ export default {
   color: #909399;
   font-size: 12px;
   margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.paste-tip {
+  color: #1677ff;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.paste-tip strong {
+  background-color: #f0f5ff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Consolas', monospace;
 }
 
 .image-preview {
