@@ -65,7 +65,7 @@
                   <p class="paste-tip">📋 也可以直接 <strong>Ctrl+V</strong> 粘贴图片</p>
                 </div>
                 <div v-else class="image-preview">
-                  <img :src="imagePreview" alt="预览图片" @click="showImageModal" class="clickable-image" />
+                  <img :src="imagePreview" alt="预览图片" @click.stop="showImageModal" class="clickable-image" />
                   <div class="image-info">
                     <p>{{ imageFile.name }}</p>
                     <p>{{ formatFileSize(imageFile.size) }}</p>
@@ -160,9 +160,37 @@
       width="80%"
       :footer="null"
       centered
+      @after-close="resetImageTransform"
     >
-      <div class="image-modal-content">
-        <img :src="imagePreview" alt="图片预览" class="modal-image" />
+      <template #extra>
+        <a-space>
+          <a-button size="small" @click="zoomIn">
+            <PlusOutlined /> 放大
+          </a-button>
+          <a-button size="small" @click="zoomOut">
+            <MinusOutlined /> 缩小
+          </a-button>
+          <a-button size="small" @click="resetImageTransform">
+            <ReloadOutlined /> 重置
+          </a-button>
+          <a-tag>{{ Math.round(imageScale * 100) }}%</a-tag>
+        </a-space>
+      </template>
+      <div 
+        class="image-modal-content" 
+        @wheel="handleWheel"
+        @mousedown="startDrag"
+        @mousemove="onDrag"
+        @mouseup="stopDrag"
+        @mouseleave="stopDrag"
+      >
+        <img 
+          :src="imagePreview" 
+          alt="图片预览" 
+          class="modal-image"
+          :style="imageTransformStyle"
+          @dragstart.prevent
+        />
       </div>
     </a-modal>
   </div>
@@ -176,7 +204,10 @@ import {
   HighlightOutlined,
   DeleteOutlined,
   CopyOutlined,
-  DownloadOutlined
+  DownloadOutlined,
+  PlusOutlined,
+  MinusOutlined,
+  ReloadOutlined
 } from '@ant-design/icons-vue'
 import { getCachedModels, setCachedModels } from '../utils/modelCache'
 
@@ -187,7 +218,10 @@ export default {
     HighlightOutlined,
     DeleteOutlined,
     CopyOutlined,
-    DownloadOutlined
+    DownloadOutlined,
+    PlusOutlined,
+    MinusOutlined,
+    ReloadOutlined
   },
   data() {
     return {
@@ -204,7 +238,23 @@ export default {
       result: null,
       error: null,
       processingTime: 0,
-      imageModalVisible: false
+      imageModalVisible: false,
+      // 图片缩放和拖动相关
+      imageScale: 1,
+      imageTranslateX: 0,
+      imageTranslateY: 0,
+      isDragging: false,
+      dragStartX: 0,
+      dragStartY: 0
+    }
+  },
+  computed: {
+    imageTransformStyle() {
+      return {
+        transform: `scale(${this.imageScale}) translate(${this.imageTranslateX}px, ${this.imageTranslateY}px)`,
+        cursor: this.isDragging ? 'grabbing' : 'grab',
+        transition: this.isDragging ? 'none' : 'transform 0.2s ease'
+      }
     }
   },
   async mounted() {
@@ -496,6 +546,65 @@ export default {
      */
     showImageModal() {
       this.imageModalVisible = true
+    },
+
+    /**
+     * 放大图片
+     */
+    zoomIn() {
+      this.imageScale = Math.min(this.imageScale + 0.2, 5)
+    },
+
+    /**
+     * 缩小图片
+     */
+    zoomOut() {
+      this.imageScale = Math.max(this.imageScale - 0.2, 0.2)
+    },
+
+    /**
+     * 重置图片变换
+     */
+    resetImageTransform() {
+      this.imageScale = 1
+      this.imageTranslateX = 0
+      this.imageTranslateY = 0
+      this.isDragging = false
+    },
+
+    /**
+     * 处理鼠标滚轮事件（缩放）
+     */
+    handleWheel(event) {
+      event.preventDefault()
+      const delta = event.deltaY > 0 ? -0.1 : 0.1
+      this.imageScale = Math.max(0.2, Math.min(5, this.imageScale + delta))
+    },
+
+    /**
+     * 开始拖动
+     */
+    startDrag(event) {
+      if (event.button !== 0) return // 只响应左键
+      this.isDragging = true
+      this.dragStartX = event.clientX - this.imageTranslateX
+      this.dragStartY = event.clientY - this.imageTranslateY
+    },
+
+    /**
+     * 拖动中
+     */
+    onDrag(event) {
+      if (!this.isDragging) return
+      this.imageTranslateX = event.clientX - this.dragStartX
+      this.imageTranslateY = event.clientY - this.dragStartY
+    },
+
+    /**
+     * 停止拖动
+     */
+    stopDrag() {
+      this.isDragging = false
     }
   }
 }
@@ -659,6 +768,14 @@ export default {
 .image-modal-content {
   text-align: center;
   padding: 20px;
+  overflow: hidden;
+  position: relative;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border-radius: 8px;
 }
 
 .modal-image {
@@ -666,5 +783,7 @@ export default {
   max-height: 70vh;
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  user-select: none;
+  transform-origin: center center;
 }
 </style>
