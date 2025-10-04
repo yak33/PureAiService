@@ -17,16 +17,16 @@
             </a-form-item>
 
             <a-form-item label="AI模型">
-              <a-select 
-                v-model:value="form.model" 
-                placeholder="选择AI模型" 
+              <a-select
+                v-model:value="form.model"
+                placeholder="选择AI模型"
                 :loading="loadingModels"
                 show-search
                 :filter-option="filterOption"
               >
-                <a-select-option 
-                  v-for="model in availableModels" 
-                  :key="model.id" 
+                <a-select-option
+                  v-for="model in availableModels"
+                  :key="model.id"
                   :value="model.id"
                 >
                   {{ model.id }}
@@ -96,9 +96,7 @@
               </a-tag>
             </div>
 
-            <div class="result-text">
-              <pre>{{ result.result }}</pre>
-            </div>
+            <div class="result-text" v-html="renderedMarkdown"></div>
           </div>
 
           <div v-else-if="error" class="result-placeholder">
@@ -129,6 +127,9 @@ import { aiService } from '../services/api'
 import { message } from 'ant-design-vue'
 import { CopyOutlined, HighlightOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { getCachedModels, setCachedModels } from '../utils/modelCache'
+import { marked } from 'marked'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github.css'
 
 export default {
   name: 'TextAnalysis',
@@ -152,6 +153,27 @@ export default {
       error: null
     }
   },
+  computed: {
+    renderedMarkdown() {
+      if (!this.result?.result) return ''
+      // 配置 marked
+      marked.setOptions({
+        highlight: function(code, lang) {
+          if (lang && hljs.getLanguage(lang)) {
+            try {
+              return hljs.highlight(code, { language: lang }).value
+            } catch (err) {
+              console.error('代码高亮失败:', err)
+            }
+          }
+          return hljs.highlightAuto(code).value
+        },
+        breaks: true,
+        gfm: true
+      })
+      return marked.parse(this.result.result)
+    }
+  },
   async mounted() {
     await this.loadAvailableModels()
   },
@@ -162,7 +184,7 @@ export default {
       if (cachedModels && cachedModels.length > 0) {
         this.availableModels = cachedModels
         if (!this.form.model) {
-          const glmModel = this.availableModels.find(m => 
+          const glmModel = this.availableModels.find(m =>
             m.id.includes('GLM-4') && !m.id.includes('V') && !m.id.includes('Vision')
           )
           this.form.model = glmModel ? glmModel.id : this.availableModels[0].id
@@ -180,7 +202,7 @@ export default {
           setCachedModels(this.availableModels)
           // 优先选择GLM-4.5（非视觉模型），如果不存在则选择第一个
           if (!this.form.model && this.availableModels.length > 0) {
-            const glmModel = this.availableModels.find(m => 
+            const glmModel = this.availableModels.find(m =>
               m.id.includes('GLM-4') && !m.id.includes('V') && !m.id.includes('Vision')
             )
             this.form.model = glmModel ? glmModel.id : this.availableModels[0].id
@@ -287,16 +309,133 @@ export default {
   border: 1px solid #e9ecef;
   border-radius: 6px;
   padding: 16px;
-  max-height: 600px;
+  max-height: 800px;
   overflow-y: auto;
 }
 
-.result-text pre {
-  margin: 0;
-  white-space: pre-wrap;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+/* Markdown 样式 */
+.result-text :deep(h1),
+.result-text :deep(h2),
+.result-text :deep(h3),
+.result-text :deep(h4),
+.result-text :deep(h5),
+.result-text :deep(h6) {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #1a1a1a;
+}
+
+.result-text :deep(h1) {
+  font-size: 2em;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 0.3em;
+}
+
+.result-text :deep(h2) {
+  font-size: 1.5em;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 0.3em;
+}
+
+.result-text :deep(h3) {
+  font-size: 1.25em;
+}
+
+.result-text :deep(p) {
+  margin-bottom: 16px;
   line-height: 1.6;
-  color: #333;
+}
+
+.result-text :deep(ul),
+.result-text :deep(ol) {
+  padding-left: 2em;
+  margin-bottom: 16px;
+}
+
+.result-text :deep(li) {
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.result-text :deep(code) {
+  background-color: rgba(27, 31, 35, 0.05);
+  border-radius: 3px;
+  font-size: 85%;
+  margin: 0;
+  padding: 0.2em 0.4em;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.result-text :deep(pre) {
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  padding: 16px;
+  overflow: auto;
+  margin-bottom: 16px;
+  border: 1px solid #e9ecef;
+}
+
+.result-text :deep(pre code) {
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  display: block;
+  white-space: pre;
+  line-height: 1.5;
+}
+
+.result-text :deep(blockquote) {
+  border-left: 4px solid #dfe2e5;
+  padding: 0 1em;
+  color: #6a737d;
+  margin-bottom: 16px;
+}
+
+.result-text :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.result-text :deep(table th),
+.result-text :deep(table td) {
+  border: 1px solid #dfe2e5;
+  padding: 8px 13px;
+}
+
+.result-text :deep(table th) {
+  background-color: #f6f8fa;
+  font-weight: 600;
+}
+
+.result-text :deep(table tr:nth-child(even)) {
+  background-color: #f6f8fa;
+}
+
+.result-text :deep(hr) {
+  border: none;
+  border-top: 2px solid #e9ecef;
+  margin: 24px 0;
+}
+
+.result-text :deep(a) {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.result-text :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.result-text :deep(strong) {
+  font-weight: 600;
+}
+
+.result-text :deep(em) {
+  font-style: italic;
 }
 
 .result-placeholder {
