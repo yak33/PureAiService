@@ -40,6 +40,19 @@ api.interceptors.response.use(
       error.response?.status,
       error.response?.data || error.message
     )
+    
+    // 处理401未授权错误 - token过期或无效
+    if (error.response?.status === 401) {
+      // 清除本地存储的token
+      localStorage.removeItem('token')
+      
+      // 跳转到登录页面，并保存当前路径用于登录后跳转
+      const currentPath = window.location.pathname
+      window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`
+      
+      return Promise.reject(new Error('登录已过期，请重新登录'))
+    }
+    
     return Promise.reject(error)
   }
 )
