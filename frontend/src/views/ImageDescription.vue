@@ -98,9 +98,7 @@
                   </a-button>
                 </div>
               </div>
-              <div class="description-content">
-                <pre>{{ result.description }}</pre>
-              </div>
+              <div class="description-content" v-html="renderMarkdown(result.description)"></div>
             </div>
 
             <div class="usage-tip">
@@ -191,6 +189,9 @@ import {
   CopyOutlined,
   ReloadOutlined
 } from '@ant-design/icons-vue'
+import { marked } from 'marked'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github.css'
 
 export default {
   name: 'ImageDescription',
@@ -319,6 +320,25 @@ export default {
         cartoon: '卡通风格'
       }
       return labels[style] || style
+    },
+    
+    renderMarkdown(content) {
+      if (!content) return ''
+      marked.setOptions({
+        highlight: function(code, lang) {
+          if (lang && hljs.getLanguage(lang)) {
+            try {
+              return hljs.highlight(code, { language: lang }).value
+            } catch (err) {
+              console.error('代码高亮失败:', err)
+            }
+          }
+          return hljs.highlightAuto(code).value
+        },
+        breaks: true,
+        gfm: true
+      })
+      return marked.parse(content)
     }
   }
 }
@@ -389,13 +409,62 @@ export default {
   padding: 16px;
 }
 
-.description-content pre {
-  margin: 0;
-  white-space: pre-wrap;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.6;
-  color: #333;
+/* Markdown 样式 */
+.description-content :deep(h1), .description-content :deep(h2), .description-content :deep(h3),
+.description-content :deep(h4), .description-content :deep(h5), .description-content :deep(h6) {
+  margin: 16px 0 8px;
+  font-weight: 600;
+  line-height: 1.25;
 }
+.description-content :deep(h1) { font-size: 1.5em; }
+.description-content :deep(h2) { font-size: 1.3em; }
+.description-content :deep(h3) { font-size: 1.1em; }
+
+.description-content :deep(p) { margin: 8px 0; line-height: 1.6; }
+.description-content :deep(ul), .description-content :deep(ol) { padding-left: 1.5em; margin: 8px 0; }
+.description-content :deep(li) { margin: 4px 0; line-height: 1.6; }
+
+.description-content :deep(code) {
+  background-color: rgba(27, 31, 35, 0.05);
+  border-radius: 3px;
+  font-size: 85%;
+  padding: 0.2em 0.4em;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.description-content :deep(pre) {
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  padding: 12px;
+  overflow: auto;
+  margin: 8px 0;
+  border: 1px solid #e9ecef;
+}
+
+.description-content :deep(pre code) {
+  background-color: transparent;
+  padding: 0;
+  font-size: 100%;
+  display: block;
+  white-space: pre;
+  line-height: 1.5;
+}
+
+.description-content :deep(blockquote) {
+  border-left: 4px solid #dfe2e5;
+  padding: 0 0.8em;
+  color: #6a737d;
+  margin: 8px 0;
+}
+
+.description-content :deep(table) { border-collapse: collapse; width: 100%; margin: 8px 0; }
+.description-content :deep(table th), .description-content :deep(table td) { border: 1px solid #dfe2e5; padding: 6px 10px; }
+.description-content :deep(table th) { background-color: #f6f8fa; font-weight: 600; }
+.description-content :deep(hr) { border: none; border-top: 1px solid #e9ecef; margin: 12px 0; }
+.description-content :deep(a) { color: #0969da; text-decoration: none; }
+.description-content :deep(a:hover) { text-decoration: underline; }
+.description-content :deep(strong) { font-weight: 600; }
+.description-content :deep(em) { font-style: italic; }
 
 .result-placeholder {
   display: flex;

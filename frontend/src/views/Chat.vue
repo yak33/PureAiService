@@ -47,9 +47,7 @@
               <RobotOutlined v-else />
             </div>
             <div class="message-content">
-              <div class="message-text">
-                <pre>{{ message.content }}</pre>
-              </div>
+              <div class="message-text" v-html="renderMarkdown(message.content)"></div>
               <div class="message-time">
                 {{ formatTime(message.timestamp) }}
               </div>
@@ -156,6 +154,9 @@ import {
   SettingOutlined
 } from '@ant-design/icons-vue'
 import { getCachedModels, setCachedModels } from '../utils/modelCache'
+import { marked } from 'marked'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github.css'
 
 export default {
   name: 'Chat',
@@ -347,6 +348,25 @@ export default {
       } catch (error) {
         console.error('加载聊天记录失败:', error)
       }
+    },
+    
+    renderMarkdown(content) {
+      if (!content) return ''
+      marked.setOptions({
+        highlight: function(code, lang) {
+          if (lang && hljs.getLanguage(lang)) {
+            try {
+              return hljs.highlight(code, { language: lang }).value
+            } catch (err) {
+              console.error('代码高亮失败:', err)
+            }
+          }
+          return hljs.highlightAuto(code).value
+        },
+        breaks: true,
+        gfm: true
+      })
+      return marked.parse(content)
     }
   }
 }
@@ -442,12 +462,66 @@ export default {
   position: relative;
 }
 
-.message-text pre {
-  margin: 0;
-  white-space: pre-wrap;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+/* Markdown 样式 */
+.message-text :deep(h1), .message-text :deep(h2), .message-text :deep(h3),
+.message-text :deep(h4), .message-text :deep(h5), .message-text :deep(h6) {
+  margin: 12px 0 8px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.message-text :deep(h1) { font-size: 1.5em; }
+.message-text :deep(h2) { font-size: 1.3em; }
+.message-text :deep(h3) { font-size: 1.1em; }
+
+.message-text :deep(p) { margin: 8px 0; line-height: 1.6; }
+.message-text :deep(ul), .message-text :deep(ol) { padding-left: 1.5em; margin: 8px 0; }
+.message-text :deep(li) { margin: 4px 0; line-height: 1.6; }
+
+.message-text :deep(code) {
+  background-color: rgba(0, 0, 0, 0.06);
+  border-radius: 3px;
+  font-size: 85%;
+  padding: 0.2em 0.4em;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.message-text :deep(pre) {
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  padding: 12px;
+  overflow: auto;
+  margin: 8px 0;
+  border: 1px solid #e9ecef;
+}
+
+.message-text :deep(pre code) {
+  background-color: transparent;
+  padding: 0;
+  font-size: 90%;
+  display: block;
+  white-space: pre;
   line-height: 1.5;
 }
+
+.message-text :deep(blockquote) {
+  border-left: 4px solid #dfe2e5;
+  padding: 0 0.8em;
+  color: #6a737d;
+  margin: 8px 0;
+}
+
+.message-text :deep(table) { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 0.9em; }
+.message-text :deep(table th), .message-text :deep(table td) { border: 1px solid #dfe2e5; padding: 6px 10px; }
+.message-text :deep(table th) { background-color: rgba(0,0,0,0.03); font-weight: 600; }
+.message-text :deep(hr) { border: none; border-top: 1px solid #e9ecef; margin: 12px 0; }
+.message-text :deep(a) { color: #0969da; text-decoration: none; }
+.message-text :deep(a:hover) { text-decoration: underline; }
+.message-text :deep(strong) { font-weight: 600; }
+.message-text :deep(em) { font-style: italic; }
+
+/* 用户消息中的 Markdown 样式调整 */
+.user-message .message-text :deep(code) { background-color: rgba(255, 255, 255, 0.2); }
+.user-message .message-text :deep(pre) { background-color: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
 
 .message-time {
   font-size: 12px;
