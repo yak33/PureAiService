@@ -48,15 +48,38 @@
         </a-space>
       </div>
 
-      <!-- 统计信息 -->
-      <a-alert v-if="configInfo" type="info" show-icon style="margin: 16px 0;">
-        <template #message>
-          当前已启用 <strong>{{ configInfo.total_models }}</strong> 个模型
-          <span v-if="configInfo.updated_at">
-            ，最后更新: {{ formatDate(configInfo.updated_at) }}
-          </span>
-        </template>
-      </a-alert>
+      <!-- 统计信息和已选模型排序区域 -->
+      <a-row :gutter="16" style="margin: 16px 0;">
+        <a-col :span="24" :lg="12">
+          <a-alert v-if="configInfo" type="info" show-icon>
+            <template #message>
+              当前已启用 <strong>{{ configInfo.total_models }}</strong> 个模型
+              <span v-if="configInfo.updated_at">
+                ，最后更新: {{ formatDate(configInfo.updated_at) }}
+              </span>
+            </template>
+          </a-alert>
+        </a-col>
+        <a-col :span="24" :lg="12">
+          <a-card size="small" title="📋 已选模型（可拖拽排序）" v-if="selectedModels.length > 0">
+            <template #extra>
+              <a-tooltip title="拖动模型可调整在下拉列表中的显示顺序">
+                <InfoCircleOutlined style="color: #1890ff;" />
+              </a-tooltip>
+            </template>
+            <div ref="sortableList" class="sortable-list">
+              <div v-for="(model, index) in selectedModels" :key="model.id" :data-id="model.id" class="sortable-item">
+                <div class="sortable-item-content">
+                  <HolderOutlined class="drag-handle" />
+                  <span class="model-order">{{ index + 1 }}</span>
+                  <span class="model-name">{{ model.id }}</span>
+                  <CloseOutlined class="remove-icon" @click="removeModel(model)" />
+                </div>
+              </div>
+            </div>
+          </a-card>
+        </a-col>
+      </a-row>
 
       <!-- 模型列表 -->
       <a-table :columns="columns" :data-source="filteredModels" :loading="loading"
@@ -87,16 +110,27 @@
 <script>
 import { aiService } from '../services/api'
 import { message } from 'ant-design-vue'
-import { ReloadOutlined, SaveOutlined, SearchOutlined } from '@ant-design/icons-vue'
+import {
+  ReloadOutlined,
+  SaveOutlined,
+  SearchOutlined,
+  HolderOutlined,
+  CloseOutlined,
+  InfoCircleOutlined
+} from '@ant-design/icons-vue'
 import { clearModelsCache } from '../utils/modelCache'
 import eventBus, { EVENT_MODELS_UPDATED } from '../utils/eventBus'
+import Sortable from 'sortablejs'
 
 export default {
   name: 'ModelsManagement',
   components: {
     ReloadOutlined,
     SaveOutlined,
-    SearchOutlined
+    SearchOutlined,
+    HolderOutlined,
+    CloseOutlined,
+    InfoCircleOutlined
   },
   data() {
     return {
@@ -111,6 +145,7 @@ export default {
       searchText: '',
       showOnlySelected: false,
       showOnlyFree: false,
+      sortableInstance: null,
       columns: [
         {
           title: '选择',
@@ -169,6 +204,15 @@ export default {
   async mounted() {
     await this.loadConfig()
     await this.loadPlatformModels()
+    this.$nextTick(() => {
+      this.initSortable()
+    })
+  },
+  updated() {
+    // 当 selectedModels 更新后，重新初始化拖拽
+    this.$nextTick(() => {
+      this.initSortable()
+    })
   },
   methods: {
     async loadConfig() {
@@ -238,6 +282,55 @@ export default {
     formatDate(dateStr) {
       if (!dateStr) return ''
       return new Date(dateStr).toLocaleString('zh-CN')
+    },
+
+    /**
+     * 初始化拖拽排序功能
+     */
+    initSortable() {
+      const listElement = this.$refs.sortableList
+      if (!listElement || this.sortableInstance) {
+        return
+      }
+
+      this.sortableInstance = Sortable.create(listElement, {
+        animation: 200,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        onEnd: (evt) => {
+          const oldIndex = evt.oldIndex
+          const newIndex = evt.newIndex
+
+          if (oldIndex !== newIndex) {
+            // 更新数组顺序
+            const movedItem = this.selectedModels.splice(oldIndex, 1)[0]
+            this.selectedModels.splice(newIndex, 0, movedItem)
+
+            message.success('排序已更新，请记得保存配置', 2)
+          }
+        }
+      })
+    },
+
+    /**
+     * 从已选列表中移除模型
+     */
+    removeModel(model) {
+      const index = this.selectedModels.findIndex(m => m.id === model.id)
+      if (index > -1) {
+        this.selectedModels.splice(index, 1)
+        message.success(`已移除模型: ${model.id}`)
+      }
+    }
+  },
+
+  beforeUnmount() {
+    // 销毁 sortable 实例
+    if (this.sortableInstance) {
+      this.sortableInstance.destroy()
+      this.sortableInstance = null
     }
   }
 }
@@ -264,5 +357,125 @@ export default {
 .model-id {
   font-family: 'Monaco', 'Consolas', monospace;
   font-size: 13px;
+}
+
+/* 拖拽排序样式 */
+.sortable-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.sortable-item {
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.sortable-item-content {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  cursor: move;
+  transition: all 0.2s ease;
+}
+
+.sortable-item-content:hover {
+  background: #f0f0f0;
+  border-color: #1890ff;
+  transform: translateX(2px);
+}
+
+.drag-handle {
+  font-size: 16px;
+  color: #999;
+  margin-right: 12px;
+  cursor: grab;
+  transition: color 0.2s ease;
+}
+
+.drag-handle:hover {
+  color: #1890ff;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.model-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #1890ff;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.model-name {
+  flex: 1;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 13px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-icon {
+  font-size: 12px;
+  color: #ff4d4f;
+  margin-left: 12px;
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.remove-icon:hover {
+  color: #ff7875;
+  transform: scale(1.2);
+}
+
+/* Sortable 拖拽状态样式 */
+.sortable-ghost {
+  opacity: 0.4;
+  background: #e6f7ff;
+}
+
+.sortable-chosen {
+  background: #e6f7ff;
+  border-color: #1890ff;
+}
+
+.sortable-drag {
+  opacity: 0.8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 滚动条美化 */
+.sortable-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sortable-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.sortable-list::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.sortable-list::-webkit-scrollbar-thumb:hover {
+  background: #999;
 }
 </style>
