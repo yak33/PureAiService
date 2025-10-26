@@ -17,36 +17,22 @@
       <!-- 筛选区域 -->
       <div class="filter-section">
         <a-space size="middle" wrap style="width: 100%">
-          <a-input-search
-            v-model:value="searchText"
-            placeholder="搜索模型名称（支持模糊匹配）"
-            allow-clear
-            style="width: 300px"
-          >
+          <a-input-search v-model:value="searchText" placeholder="搜索模型名称（支持模糊匹配）" allow-clear style="width: 300px">
             <template #prefix>
               <SearchOutlined />
             </template>
           </a-input-search>
-          
-          <a-select
-            v-model:value="filters.type"
-            style="width: 120px"
-            placeholder="全部类型"
-            @change="loadPlatformModels"
-          >
+
+          <a-select v-model:value="filters.type" style="width: 120px" placeholder="全部类型" @change="loadPlatformModels">
             <a-select-option value="">全部</a-select-option>
             <a-select-option value="text">Text</a-select-option>
             <a-select-option value="image">Image</a-select-option>
             <a-select-option value="audio">Audio</a-select-option>
             <a-select-option value="video">Video</a-select-option>
           </a-select>
-          
-          <a-select
-            v-model:value="filters.subType"
-            style="width: 150px"
-            placeholder="全部子类型"
-            @change="loadPlatformModels"
-          >
+
+          <a-select v-model:value="filters.subType" style="width: 150px" placeholder="全部子类型"
+            @change="loadPlatformModels">
             <a-select-option value="">全部</a-select-option>
             <a-select-option value="chat">Chat</a-select-option>
             <a-select-option value="embedding">Embedding</a-select-option>
@@ -56,7 +42,7 @@
             <a-select-option value="speech-to-text">Speech-to-Text</a-select-option>
             <a-select-option value="text-to-video">Text-to-Video</a-select-option>
           </a-select>
-          
+
           <a-checkbox v-model:checked="showOnlySelected">仅显示已选</a-checkbox>
           <a-checkbox v-model:checked="showOnlyFree">仅显示免费模型</a-checkbox>
         </a-space>
@@ -73,20 +59,11 @@
       </a-alert>
 
       <!-- 模型列表 -->
-      <a-table
-        :columns="columns"
-        :data-source="filteredModels"
-        :loading="loading"
-        :pagination="{ pageSize: 20, showTotal: (total) => `共 ${total} 个模型` }"
-        row-key="id"
-        size="middle"
-      >
+      <a-table :columns="columns" :data-source="filteredModels" :loading="loading"
+        :pagination="{ pageSize: 20, showTotal: (total) => `共 ${total} 个模型` }" row-key="id" size="middle">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'selection'">
-            <a-checkbox
-              :checked="isSelected(record.id)"
-              @change="toggleSelection(record)"
-            />
+            <a-checkbox :checked="isSelected(record.id)" @change="toggleSelection(record)" />
           </template>
           <template v-else-if="column.key === 'id'">
             <a-space>
@@ -111,6 +88,8 @@
 import { aiService } from '../services/api'
 import { message } from 'ant-design-vue'
 import { ReloadOutlined, SaveOutlined, SearchOutlined } from '@ant-design/icons-vue'
+import { clearModelsCache } from '../utils/modelCache'
+import eventBus, { EVENT_MODELS_UPDATED } from '../utils/eventBus'
 
 export default {
   name: 'ModelsManagement',
@@ -165,25 +144,25 @@ export default {
   computed: {
     filteredModels() {
       let models = this.platformModels
-      
+
       // 搜索过滤（模糊匹配）
       if (this.searchText && this.searchText.trim()) {
         const searchLower = this.searchText.toLowerCase().trim()
-        models = models.filter(model => 
+        models = models.filter(model =>
           model.id.toLowerCase().includes(searchLower)
         )
       }
-      
+
       // 过滤付费模型
       if (this.showOnlyFree) {
         models = models.filter(model => !model.id.startsWith('Pro/'))
       }
-      
+
       // 仅显示已选
       if (this.showOnlySelected) {
         models = models.filter(model => this.isSelected(model.id))
       }
-      
+
       return models
     }
   },
@@ -239,6 +218,17 @@ export default {
         if (response.data.success) {
           message.success(response.data.message)
           await this.loadConfig()
+
+          // 清除模型缓存，让其他页面重新加载最新的模型列表
+          clearModelsCache()
+          console.log('模型配置已保存，缓存已清除')
+
+          // 通知其他页面模型列表已更新
+          eventBus.emit(EVENT_MODELS_UPDATED, {
+            message: '模型配置已更新',
+            timestamp: Date.now()
+          })
+          console.log('已发送模型更新事件通知')
         }
       } catch (error) {
         console.error('保存配置失败:', error)

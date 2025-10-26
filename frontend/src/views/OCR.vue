@@ -28,18 +28,9 @@
 
               <a-col :span="24" :md="8">
                 <a-form-item label="视觉模型">
-                  <a-select 
-                    v-model:value="form.model" 
-                    placeholder="选择视觉模型" 
-                    :loading="loadingModels"
-                    show-search
-                    :filter-option="filterOption"
-                  >
-                    <a-select-option 
-                      v-for="model in visionModels" 
-                      :key="model.id" 
-                      :value="model.id"
-                    >
+                  <a-select v-model:value="form.model" placeholder="选择视觉模型" :loading="loadingModels" show-search
+                    :filter-option="filterOption">
+                    <a-select-option v-for="model in visionModels" :key="model.id" :value="model.id">
                       {{ model.id }}
                     </a-select-option>
                   </a-select>
@@ -51,13 +42,8 @@
             </a-row>
 
             <a-form-item label="上传图片">
-              <a-upload-dragger 
-                name="file" 
-                :show-upload-list="false" 
-                :before-upload="handleBeforeUpload" 
-                accept="image/*"
-                @paste.native="handlePaste"
-              >
+              <a-upload-dragger name="file" :show-upload-list="false" :before-upload="handleBeforeUpload"
+                accept="image/*" @paste.native="handlePaste">
                 <div v-if="!imageFile" class="upload-area">
                   <UploadOutlined class="upload-icon" />
                   <p class="upload-text">将图片拖拽到此处，或<em>点击上传</em></p>
@@ -126,11 +112,7 @@
           </div>
 
           <div v-else-if="error" class="result-placeholder">
-            <a-result
-              status="error"
-              title="识别失败"
-              :sub-title="error"
-            >
+            <a-result status="error" title="识别失败" :sub-title="error">
               <template #extra>
                 <a-button type="primary" @click="error = null">
                   知道了
@@ -154,14 +136,8 @@
     </a-alert>
 
     <!-- 图片预览模态框 -->
-    <a-modal 
-      v-model:open="imageModalVisible" 
-      title="图片预览" 
-      width="80%"
-      :footer="null"
-      centered
-      @after-close="resetImageTransform"
-    >
+    <a-modal v-model:open="imageModalVisible" title="图片预览" width="80%" :footer="null" centered
+      @after-close="resetImageTransform">
       <template #extra>
         <a-space>
           <a-button size="small" @click="zoomIn">
@@ -176,21 +152,9 @@
           <a-tag>{{ Math.round(imageScale * 100) }}%</a-tag>
         </a-space>
       </template>
-      <div 
-        class="image-modal-content" 
-        @wheel="handleWheel"
-        @mousedown="startDrag"
-        @mousemove="onDrag"
-        @mouseup="stopDrag"
-        @mouseleave="stopDrag"
-      >
-        <img 
-          :src="imagePreview" 
-          alt="图片预览" 
-          class="modal-image"
-          :style="imageTransformStyle"
-          @dragstart.prevent
-        />
+      <div class="image-modal-content" @wheel="handleWheel" @mousedown="startDrag" @mousemove="onDrag"
+        @mouseup="stopDrag" @mouseleave="stopDrag">
+        <img :src="imagePreview" alt="图片预览" class="modal-image" :style="imageTransformStyle" @dragstart.prevent />
       </div>
     </a-modal>
   </div>
@@ -210,6 +174,7 @@ import {
   ReloadOutlined
 } from '@ant-design/icons-vue'
 import { getCachedModels, setCachedModels } from '../utils/modelCache'
+import eventBus, { EVENT_MODELS_UPDATED } from '../utils/eventBus'
 
 export default {
   name: 'OCR',
@@ -261,8 +226,11 @@ export default {
     await this.loadAvailableModels()
     // 添加全局粘贴事件监听
     window.addEventListener('paste', this.handlePaste)
+    // 监听模型更新事件
+    eventBus.on(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
   },
   beforeUnmount() {
+    eventBus.off(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
     // 移除事件监听
     window.removeEventListener('paste', this.handlePaste)
     if (this.imagePreview) {
@@ -275,7 +243,7 @@ export default {
       const cachedModels = getCachedModels()
       if (cachedModels && cachedModels.length > 0) {
         // 筛选出视觉模型（包含 V 或 Vision 的模型）
-        this.visionModels = cachedModels.filter(m => 
+        this.visionModels = cachedModels.filter(m =>
           m.id.includes('V') || m.id.includes('Vision') || m.id.includes('vision')
         )
         if (!this.form.model && this.visionModels.length > 0) {
@@ -293,7 +261,7 @@ export default {
         if (response.data.models && response.data.models.length > 0) {
           setCachedModels(response.data.models)
           // 筛选出视觉模型
-          this.visionModels = response.data.models.filter(m => 
+          this.visionModels = response.data.models.filter(m =>
             m.id.includes('V') || m.id.includes('Vision') || m.id.includes('vision')
           )
           if (!this.form.model && this.visionModels.length > 0) {
@@ -605,6 +573,30 @@ export default {
      */
     stopDrag() {
       this.isDragging = false
+    },
+
+    /**
+     * 处理模型更新事件
+     * 当模型配置被修改时，重新加载模型列表
+     */
+    async handleModelsUpdated(data) {
+      console.log('收到模型更新通知:', data)
+      message.info('模型列表已更新，正在刷新...', 2)
+
+      // 重新加载模型列表
+      await this.loadAvailableModels()
+
+      // 如果当前选择的视觉模型不在新的模型列表中，自动切换到第一个视觉模型
+      if (this.form.model && !this.visionModels.some(m => m.id === this.form.model)) {
+        if (this.visionModels.length > 0) {
+          const glmVisionModel = this.visionModels.find(m => m.id.includes('GLM') && m.id.includes('V'))
+          this.form.model = glmVisionModel ? glmVisionModel.id : this.visionModels[0].id
+          message.warning('原模型已被移除，已自动切换到: ' + this.form.model, 3)
+        } else {
+          this.form.model = ''
+          message.warning('当前没有可用的视觉模型，请先在模型管理页面配置', 4)
+        }
+      }
     }
   }
 }

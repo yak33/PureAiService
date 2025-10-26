@@ -19,17 +19,17 @@
       "owned_by": ""
     },
     {
-      "id": "zai-org/GLM-4.5",
+      "id": "MiniMaxAI/MiniMax-M1-80k",
       "object": "model",
       "created": 0,
       "owned_by": ""
     },
     {
-      "id": "MiniMaxAI/MiniMax-M1-80k",
+      "id": "zai-org/GLM-4.6",
       "object": "model",
       "created": 0,
       "owned_by": ""
     }
   ],
-  "updated_at": "2025-10-01T22:07:07.374401"
+  "updated_at": "2025-10-26T22:19:08.068519"
 }

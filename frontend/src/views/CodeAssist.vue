@@ -4,92 +4,67 @@
       <a-col :span="24" :lg="12">
         <a-card class="form-card" title="💻 代码助手">
           <a-form :model="form" layout="vertical">
-        <a-row :gutter="20">
-          <a-col :span="24" :md="8">
-            <a-form-item label="任务类型">
-              <a-select v-model:value="form.task" placeholder="选择代码任务">
-                <a-select-option value="review">代码审查</a-select-option>
-                <a-select-option value="optimize">代码优化</a-select-option>
-                <a-select-option value="explain">代码解释</a-select-option>
-                <a-select-option value="debug">错误调试</a-select-option>
-                <a-select-option value="generate">代码生成</a-select-option>
-                <a-select-option value="convert">语言转换</a-select-option>
-                <a-select-option value="test">编写测试</a-select-option>
-                <a-select-option value="document">生成文档</a-select-option>
-              </a-select>
+            <a-row :gutter="20">
+              <a-col :span="24" :md="8">
+                <a-form-item label="任务类型">
+                  <a-select v-model:value="form.task" placeholder="选择代码任务">
+                    <a-select-option value="review">代码审查</a-select-option>
+                    <a-select-option value="optimize">代码优化</a-select-option>
+                    <a-select-option value="explain">代码解释</a-select-option>
+                    <a-select-option value="debug">错误调试</a-select-option>
+                    <a-select-option value="generate">代码生成</a-select-option>
+                    <a-select-option value="convert">语言转换</a-select-option>
+                    <a-select-option value="test">编写测试</a-select-option>
+                    <a-select-option value="document">生成文档</a-select-option>
+                  </a-select>
+                </a-form-item>
+              </a-col>
+
+              <a-col :span="24" :md="8">
+                <a-form-item label="编程语言">
+                  <a-select v-model:value="form.language" placeholder="选择编程语言">
+                    <a-select-option value="Python">Python</a-select-option>
+                    <a-select-option value="JavaScript">JavaScript</a-select-option>
+                    <a-select-option value="TypeScript">TypeScript</a-select-option>
+                    <a-select-option value="Java">Java</a-select-option>
+                    <a-select-option value="C++">C++</a-select-option>
+                    <a-select-option value="Go">Go</a-select-option>
+                    <a-select-option value="Rust">Rust</a-select-option>
+                    <a-select-option value="PHP">PHP</a-select-option>
+                    <a-select-option value="C#">C#</a-select-option>
+                    <a-select-option value="Other">其他</a-select-option>
+                  </a-select>
+                </a-form-item>
+              </a-col>
+
+              <a-col :span="24" :md="8">
+                <a-form-item label="AI模型">
+                  <a-select v-model:value="form.model" placeholder="选择AI模型" :loading="loadingModels" show-search
+                    :filter-option="filterOption">
+                    <a-select-option v-for="model in availableModels" :key="model.id" :value="model.id">
+                      {{ model.id }}
+                    </a-select-option>
+                  </a-select>
+                  <div v-if="!loadingModels && availableModels.length === 0" style="margin-top: 8px;">
+                    <a-alert type="warning" message="请先在模型管理页面配置可用模型" show-icon />
+                  </div>
+                </a-form-item>
+              </a-col>
+            </a-row>
+
+            <a-form-item label="具体要求">
+              <a-textarea v-model:value="form.requirements" :rows="3" placeholder="描述您的具体需求或问题..."
+                :auto-size="{ minRows: 3, maxRows: 8 }" />
             </a-form-item>
-          </a-col>
 
-          <a-col :span="24" :md="8">
-            <a-form-item label="编程语言">
-              <a-select v-model:value="form.language" placeholder="选择编程语言">
-                <a-select-option value="Python">Python</a-select-option>
-                <a-select-option value="JavaScript">JavaScript</a-select-option>
-                <a-select-option value="TypeScript">TypeScript</a-select-option>
-                <a-select-option value="Java">Java</a-select-option>
-                <a-select-option value="C++">C++</a-select-option>
-                <a-select-option value="Go">Go</a-select-option>
-                <a-select-option value="Rust">Rust</a-select-option>
-                <a-select-option value="PHP">PHP</a-select-option>
-                <a-select-option value="C#">C#</a-select-option>
-                <a-select-option value="Other">其他</a-select-option>
-              </a-select>
+            <a-form-item v-if="form.task !== 'generate'" label="代码内容">
+              <a-textarea v-model:value="form.code" :rows="12" placeholder="粘贴您的代码..." :maxlength="8000" show-count
+                :auto-size="{ minRows: 12, maxRows: 20 }" class="code-textarea" />
             </a-form-item>
-          </a-col>
-
-          <a-col :span="24" :md="8">
-            <a-form-item label="AI模型">
-              <a-select 
-                v-model:value="form.model" 
-                placeholder="选择AI模型" 
-                :loading="loadingModels"
-                show-search
-                :filter-option="filterOption"
-              >
-                <a-select-option 
-                  v-for="model in availableModels" 
-                  :key="model.id" 
-                  :value="model.id"
-                >
-                  {{ model.id }}
-                </a-select-option>
-              </a-select>
-              <div v-if="!loadingModels && availableModels.length === 0" style="margin-top: 8px;">
-                <a-alert type="warning" message="请先在模型管理页面配置可用模型" show-icon />
-              </div>
-            </a-form-item>
-          </a-col>
-        </a-row>
-
-        <a-form-item label="具体要求">
-          <a-textarea
-            v-model:value="form.requirements"
-            :rows="3"
-            placeholder="描述您的具体需求或问题..."
-            :auto-size="{ minRows: 3, maxRows: 8 }"
-          />
-        </a-form-item>
-
-        <a-form-item v-if="form.task !== 'generate'" label="代码内容">
-          <a-textarea
-            v-model:value="form.code"
-            :rows="12"
-            placeholder="粘贴您的代码..."
-            :maxlength="8000"
-            show-count
-            :auto-size="{ minRows: 12, maxRows: 20 }"
-            class="code-textarea"
-          />
-        </a-form-item>
 
             <a-form-item>
               <a-space>
-                <a-button
-                  type="primary"
-                  @click="processCode"
-                  :loading="loading"
-                  :disabled="!canProcess"
-                >
+                <a-button type="primary" @click="processCode" :loading="loading" :disabled="!canProcess">
                   <ToolOutlined />
                   <span>{{ getButtonText() }}</span>
                 </a-button>
@@ -131,11 +106,7 @@
           </div>
 
           <div v-else-if="error" class="result-placeholder">
-            <a-result
-              status="error"
-              title="处理失败"
-              :sub-title="error"
-            >
+            <a-result status="error" title="处理失败" :sub-title="error">
               <template #extra>
                 <a-button type="primary" @click="error = null">
                   知道了
@@ -163,6 +134,7 @@ import {
   DownloadOutlined
 } from '@ant-design/icons-vue'
 import { getCachedModels, setCachedModels } from '../utils/modelCache'
+import eventBus, { EVENT_MODELS_UPDATED } from '../utils/eventBus'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
@@ -193,6 +165,12 @@ export default {
   },
   async mounted() {
     await this.loadAvailableModels()
+    // 监听模型更新事件
+    eventBus.on(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
+  },
+  beforeUnmount() {
+    // 移除事件监听，避免内存泄漏
+    eventBus.off(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
   },
   computed: {
     canProcess() {
@@ -211,7 +189,7 @@ export default {
     renderedMarkdown() {
       if (!this.result?.result) return ''
       marked.setOptions({
-        highlight: function(code, lang) {
+        highlight: function (code, lang) {
           if (lang && hljs.getLanguage(lang)) {
             try {
               return hljs.highlight(code, { language: lang }).value
@@ -234,7 +212,7 @@ export default {
       if (cachedModels && cachedModels.length > 0) {
         this.availableModels = cachedModels
         if (!this.form.model) {
-          const glmModel = this.availableModels.find(m => 
+          const glmModel = this.availableModels.find(m =>
             m.id.includes('GLM-4') && !m.id.includes('V') && !m.id.includes('Vision')
           )
           this.form.model = glmModel ? glmModel.id : this.availableModels[0].id
@@ -252,7 +230,7 @@ export default {
           setCachedModels(this.availableModels)
           // 优先选择GLM-4.5（非视觉模型），如果不存在则选择第一个
           if (!this.form.model && this.availableModels.length > 0) {
-            const glmModel = this.availableModels.find(m => 
+            const glmModel = this.availableModels.find(m =>
               m.id.includes('GLM-4') && !m.id.includes('V') && !m.id.includes('Vision')
             )
             this.form.model = glmModel ? glmModel.id : this.availableModels[0].id
@@ -364,13 +342,35 @@ export default {
       window.URL.revokeObjectURL(url)
 
       message.success('代码文件已下载')
+    },
+
+    /**
+     * 处理模型更新事件
+     * 当模型配置被修改时，重新加载模型列表
+     */
+    async handleModelsUpdated(data) {
+      console.log('收到模型更新通知:', data)
+      message.info('模型列表已更新，正在刷新...', 2)
+
+      // 重新加载模型列表
+      await this.loadAvailableModels()
+
+      // 如果当前选择的模型不在新的模型列表中，自动切换到第一个
+      if (this.form.model && !this.availableModels.some(m => m.id === this.form.model)) {
+        if (this.availableModels.length > 0) {
+          this.form.model = this.availableModels[0].id
+          message.warning('原模型已被移除，已自动切换到: ' + this.form.model, 3)
+        } else {
+          this.form.model = ''
+          message.warning('当前没有可用模型，请先在模型管理页面配置', 4)
+        }
+      }
     }
   }
 }
 </script>
 
 <style scoped>
-
 .code-assist {
   padding: 20px;
 }
@@ -428,13 +428,37 @@ export default {
   color: #1a1a1a;
 }
 
-.result-text :deep(h1) { font-size: 2em; border-bottom: 1px solid #e9ecef; padding-bottom: 0.3em; }
-.result-text :deep(h2) { font-size: 1.5em; border-bottom: 1px solid #e9ecef; padding-bottom: 0.3em; }
-.result-text :deep(h3) { font-size: 1.25em; }
+.result-text :deep(h1) {
+  font-size: 2em;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 0.3em;
+}
 
-.result-text :deep(p) { margin-bottom: 16px; line-height: 1.6; }
-.result-text :deep(ul), .result-text :deep(ol) { padding-left: 2em; margin-bottom: 16px; }
-.result-text :deep(li) { margin-bottom: 8px; line-height: 1.6; }
+.result-text :deep(h2) {
+  font-size: 1.5em;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 0.3em;
+}
+
+.result-text :deep(h3) {
+  font-size: 1.25em;
+}
+
+.result-text :deep(p) {
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.result-text :deep(ul),
+.result-text :deep(ol) {
+  padding-left: 2em;
+  margin-bottom: 16px;
+}
+
+.result-text :deep(li) {
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
 
 .result-text :deep(code) {
   background-color: rgba(27, 31, 35, 0.05);
@@ -471,15 +495,49 @@ export default {
   margin-bottom: 16px;
 }
 
-.result-text :deep(table) { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
-.result-text :deep(table th), .result-text :deep(table td) { border: 1px solid #dfe2e5; padding: 8px 13px; }
-.result-text :deep(table th) { background-color: #f6f8fa; font-weight: 600; }
-.result-text :deep(table tr:nth-child(even)) { background-color: #f6f8fa; }
-.result-text :deep(hr) { border: none; border-top: 2px solid #e9ecef; margin: 24px 0; }
-.result-text :deep(a) { color: #0969da; text-decoration: none; }
-.result-text :deep(a:hover) { text-decoration: underline; }
-.result-text :deep(strong) { font-weight: 600; }
-.result-text :deep(em) { font-style: italic; }
+.result-text :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.result-text :deep(table th),
+.result-text :deep(table td) {
+  border: 1px solid #dfe2e5;
+  padding: 8px 13px;
+}
+
+.result-text :deep(table th) {
+  background-color: #f6f8fa;
+  font-weight: 600;
+}
+
+.result-text :deep(table tr:nth-child(even)) {
+  background-color: #f6f8fa;
+}
+
+.result-text :deep(hr) {
+  border: none;
+  border-top: 2px solid #e9ecef;
+  margin: 24px 0;
+}
+
+.result-text :deep(a) {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.result-text :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.result-text :deep(strong) {
+  font-weight: 600;
+}
+
+.result-text :deep(em) {
+  font-style: italic;
+}
 
 .result-placeholder {
   display: flex;

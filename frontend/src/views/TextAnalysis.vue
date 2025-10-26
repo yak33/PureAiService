@@ -17,18 +17,9 @@
             </a-form-item>
 
             <a-form-item label="AI模型">
-              <a-select
-                v-model:value="form.model"
-                placeholder="选择AI模型"
-                :loading="loadingModels"
-                show-search
-                :filter-option="filterOption"
-              >
-                <a-select-option
-                  v-for="model in availableModels"
-                  :key="model.id"
-                  :value="model.id"
-                >
+              <a-select v-model:value="form.model" placeholder="选择AI模型" :loading="loadingModels" show-search
+                :filter-option="filterOption">
+                <a-select-option v-for="model in availableModels" :key="model.id" :value="model.id">
                   {{ model.id }}
                 </a-select-option>
               </a-select>
@@ -38,33 +29,18 @@
             </a-form-item>
 
             <a-form-item label="自定义提示">
-              <a-textarea
-                v-model:value="form.customPrompt"
-                :rows="2"
-                placeholder="可选：输入自定义分析要求"
-                :auto-size="{ minRows: 2, maxRows: 6 }"
-              />
+              <a-textarea v-model:value="form.customPrompt" :rows="2" placeholder="可选：输入自定义分析要求"
+                :auto-size="{ minRows: 2, maxRows: 6 }" />
             </a-form-item>
 
             <a-form-item label="文本内容">
-              <a-textarea
-                v-model:value="form.text"
-                :rows="8"
-                placeholder="请输入要分析的文本内容..."
-                :maxlength="5000"
-                show-count
-                :auto-size="{ minRows: 8, maxRows: 16 }"
-              />
+              <a-textarea v-model:value="form.text" :rows="8" placeholder="请输入要分析的文本内容..." :maxlength="5000" show-count
+                :auto-size="{ minRows: 8, maxRows: 16 }" />
             </a-form-item>
 
             <a-form-item>
               <a-space>
-                <a-button
-                  type="primary"
-                  @click="analyzeText"
-                  :loading="loading"
-                  :disabled="!form.text.trim()"
-                >
+                <a-button type="primary" @click="analyzeText" :loading="loading" :disabled="!form.text.trim()">
                   <HighlightOutlined />
                   <span>开始分析</span>
                 </a-button>
@@ -100,11 +76,7 @@
           </div>
 
           <div v-else-if="error" class="result-placeholder">
-            <a-result
-              status="error"
-              title="分析失败"
-              :sub-title="error"
-            >
+            <a-result status="error" title="分析失败" :sub-title="error">
               <template #extra>
                 <a-button type="primary" @click="error = null">
                   知道了
@@ -127,6 +99,7 @@ import { aiService } from '../services/api'
 import { message } from 'ant-design-vue'
 import { CopyOutlined, HighlightOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { getCachedModels, setCachedModels } from '../utils/modelCache'
+import eventBus, { EVENT_MODELS_UPDATED } from '../utils/eventBus'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
@@ -158,7 +131,7 @@ export default {
       if (!this.result?.result) return ''
       // 配置 marked
       marked.setOptions({
-        highlight: function(code, lang) {
+        highlight: function (code, lang) {
           if (lang && hljs.getLanguage(lang)) {
             try {
               return hljs.highlight(code, { language: lang }).value
@@ -176,6 +149,12 @@ export default {
   },
   async mounted() {
     await this.loadAvailableModels()
+    // 监听模型更新事件
+    eventBus.on(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
+  },
+  beforeUnmount() {
+    // 移除事件监听，避免内存泄漏
+    eventBus.off(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
   },
   methods: {
     async loadAvailableModels() {
@@ -268,6 +247,29 @@ export default {
         } catch (error) {
           console.error('复制失败:', error)
           message.error('复制失败')
+        }
+      }
+    },
+
+    /**
+     * 处理模型更新事件
+     * 当模型配置被修改时，重新加载模型列表
+     */
+    async handleModelsUpdated(data) {
+      console.log('收到模型更新通知:', data)
+      message.info('模型列表已更新，正在刷新...', 2)
+
+      // 重新加载模型列表
+      await this.loadAvailableModels()
+
+      // 如果当前选择的模型不在新的模型列表中，自动切换到第一个
+      if (this.form.model && !this.availableModels.some(m => m.id === this.form.model)) {
+        if (this.availableModels.length > 0) {
+          this.form.model = this.availableModels[0].id
+          message.warning('原模型已被移除，已自动切换到: ' + this.form.model, 3)
+        } else {
+          this.form.model = ''
+          message.warning('当前没有可用模型，请先在模型管理页面配置', 4)
         }
       }
     }

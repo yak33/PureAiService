@@ -5,20 +5,9 @@
         <div class="card-header">
           <span>💬 智能对话</span>
           <div class="header-controls">
-            <a-select
-              v-model:value="currentModel"
-              size="small"
-              style="width: 240px"
-              placeholder="选择AI模型"
-              :loading="loadingModels"
-              show-search
-              :filter-option="filterOption"
-            >
-              <a-select-option 
-                v-for="model in availableModels" 
-                :key="model.id" 
-                :value="model.id"
-              >
+            <a-select v-model:value="currentModel" size="small" style="width: 240px" placeholder="选择AI模型"
+              :loading="loadingModels" show-search :filter-option="filterOption">
+              <a-select-option v-for="model in availableModels" :key="model.id" :value="model.id">
                 {{ model.id }}
               </a-select-option>
             </a-select>
@@ -37,11 +26,8 @@
 
       <div class="chat-container">
         <div class="messages-container" ref="messagesContainer">
-          <div
-            v-for="(message, index) in messages"
-            :key="index"
-            :class="['message', message.role === 'user' ? 'user-message' : 'assistant-message']"
-          >
+          <div v-for="(message, index) in messages" :key="index"
+            :class="['message', message.role === 'user' ? 'user-message' : 'assistant-message']">
             <div class="message-avatar">
               <UserOutlined v-if="message.role === 'user'" />
               <RobotOutlined v-else />
@@ -85,52 +71,27 @@
 
               <a-form :model="settings" layout="vertical" size="small">
                 <a-form-item label="系统提示词">
-                  <a-textarea
-                    v-model:value="settings.systemPrompt"
-                    :rows="2"
-                    placeholder="可选：设置AI的角色和行为..."
-                    :auto-size="{ minRows: 2, maxRows: 6 }"
-                  />
+                  <a-textarea v-model:value="settings.systemPrompt" :rows="2" placeholder="可选：设置AI的角色和行为..."
+                    :auto-size="{ minRows: 2, maxRows: 6 }" />
                 </a-form-item>
                 <a-form-item label="温度参数">
                   <div class="slider-wrapper">
-                    <a-slider
-                      v-model:value="settings.temperature"
-                      :min="0"
-                      :max="1"
-                      :step="0.1"
-                    />
+                    <a-slider v-model:value="settings.temperature" :min="0" :max="1" :step="0.1" />
                     <span class="slider-label">{{ settings.temperature }} ({{ getTemperatureLabel() }})</span>
                   </div>
                 </a-form-item>
                 <a-form-item label="最大Token">
-                  <a-input-number
-                    v-model:value="settings.maxTokens"
-                    :min="100"
-                    :max="4000"
-                    :step="100"
-                  />
+                  <a-input-number v-model:value="settings.maxTokens" :min="100" :max="4000" :step="100" />
                 </a-form-item>
               </a-form>
             </a-collapse-panel>
           </a-collapse>
 
           <div class="input-area">
-            <a-textarea
-              v-model:value="inputMessage"
-              :rows="3"
-              placeholder="输入您的问题..."
-              :auto-size="{ minRows: 3, maxRows: 6 }"
-              @keydown.ctrl.enter="sendMessage"
-              :disabled="loading"
-            />
+            <a-textarea v-model:value="inputMessage" :rows="3" placeholder="输入您的问题..."
+              :auto-size="{ minRows: 3, maxRows: 6 }" @keydown.ctrl.enter="sendMessage" :disabled="loading" />
             <div class="input-actions">
-              <a-button
-                type="primary"
-                @click="sendMessage"
-                :loading="loading"
-                :disabled="!inputMessage.trim()"
-              >
+              <a-button type="primary" @click="sendMessage" :loading="loading" :disabled="!inputMessage.trim()">
                 <SendOutlined />
                 <span>发送 (Ctrl+Enter)</span>
               </a-button>
@@ -154,6 +115,7 @@ import {
   SettingOutlined
 } from '@ant-design/icons-vue'
 import { getCachedModels, setCachedModels } from '../utils/modelCache'
+import eventBus, { EVENT_MODELS_UPDATED } from '../utils/eventBus'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
@@ -187,6 +149,13 @@ export default {
   async mounted() {
     await this.loadAvailableModels()
     this.loadChatHistory()
+
+    // 监听模型更新事件
+    eventBus.on(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
+  },
+  beforeUnmount() {
+    // 移除事件监听，避免内存泄漏
+    eventBus.off(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
   },
   methods: {
     async loadAvailableModels() {
@@ -195,7 +164,7 @@ export default {
       if (cachedModels && cachedModels.length > 0) {
         this.availableModels = cachedModels
         if (!this.currentModel) {
-          const glmModel = this.availableModels.find(m => 
+          const glmModel = this.availableModels.find(m =>
             m.id.includes('GLM-4') && !m.id.includes('V') && !m.id.includes('Vision')
           )
           this.currentModel = glmModel ? glmModel.id : this.availableModels[0].id
@@ -213,7 +182,7 @@ export default {
           setCachedModels(this.availableModels)
           // 优先选择GLM-4.5（非视觉模型），如果不存在则选择第一个
           if (!this.currentModel && this.availableModels.length > 0) {
-            const glmModel = this.availableModels.find(m => 
+            const glmModel = this.availableModels.find(m =>
               m.id.includes('GLM-4') && !m.id.includes('V') && !m.id.includes('Vision')
             )
             this.currentModel = glmModel ? glmModel.id : this.availableModels[0].id
@@ -349,11 +318,11 @@ export default {
         console.error('加载聊天记录失败:', error)
       }
     },
-    
+
     renderMarkdown(content) {
       if (!content) return ''
       marked.setOptions({
-        highlight: function(code, lang) {
+        highlight: function (code, lang) {
           if (lang && hljs.getLanguage(lang)) {
             try {
               return hljs.highlight(code, { language: lang }).value
@@ -367,6 +336,32 @@ export default {
         gfm: true
       })
       return marked.parse(content)
+    },
+
+    /**
+     * 处理模型更新事件
+     * 当模型配置被修改时，重新加载模型列表
+     */
+    async handleModelsUpdated(data) {
+      console.log('收到模型更新通知:', data)
+      message.info('模型列表已更新，正在刷新...', 2)
+
+      // 重新加载模型列表（会从后端获取最新数据，因为缓存已被清除）
+      await this.loadAvailableModels()
+
+      // 如果当前选择的模型不在新的模型列表中，自动切换到第一个
+      if (this.currentModel && !this.availableModels.some(m => m.id === this.currentModel)) {
+        if (this.availableModels.length > 0) {
+          const glmModel = this.availableModels.find(m =>
+            m.id.includes('GLM-4') && !m.id.includes('V') && !m.id.includes('Vision')
+          )
+          this.currentModel = glmModel ? glmModel.id : this.availableModels[0].id
+          message.warning('原模型已被移除，已自动切换到: ' + this.currentModel, 3)
+        } else {
+          this.currentModel = ''
+          message.warning('当前没有可用模型，请先在模型管理页面配置', 4)
+        }
+      }
     }
   }
 }
@@ -463,19 +458,44 @@ export default {
 }
 
 /* Markdown 样式 */
-.message-text :deep(h1), .message-text :deep(h2), .message-text :deep(h3),
-.message-text :deep(h4), .message-text :deep(h5), .message-text :deep(h6) {
+.message-text :deep(h1),
+.message-text :deep(h2),
+.message-text :deep(h3),
+.message-text :deep(h4),
+.message-text :deep(h5),
+.message-text :deep(h6) {
   margin: 12px 0 8px;
   font-weight: 600;
   line-height: 1.25;
 }
-.message-text :deep(h1) { font-size: 1.5em; }
-.message-text :deep(h2) { font-size: 1.3em; }
-.message-text :deep(h3) { font-size: 1.1em; }
 
-.message-text :deep(p) { margin: 8px 0; line-height: 1.6; }
-.message-text :deep(ul), .message-text :deep(ol) { padding-left: 1.5em; margin: 8px 0; }
-.message-text :deep(li) { margin: 4px 0; line-height: 1.6; }
+.message-text :deep(h1) {
+  font-size: 1.5em;
+}
+
+.message-text :deep(h2) {
+  font-size: 1.3em;
+}
+
+.message-text :deep(h3) {
+  font-size: 1.1em;
+}
+
+.message-text :deep(p) {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.message-text :deep(ul),
+.message-text :deep(ol) {
+  padding-left: 1.5em;
+  margin: 8px 0;
+}
+
+.message-text :deep(li) {
+  margin: 4px 0;
+  line-height: 1.6;
+}
 
 .message-text :deep(code) {
   background-color: rgba(0, 0, 0, 0.06);
@@ -510,18 +530,56 @@ export default {
   margin: 8px 0;
 }
 
-.message-text :deep(table) { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 0.9em; }
-.message-text :deep(table th), .message-text :deep(table td) { border: 1px solid #dfe2e5; padding: 6px 10px; }
-.message-text :deep(table th) { background-color: rgba(0,0,0,0.03); font-weight: 600; }
-.message-text :deep(hr) { border: none; border-top: 1px solid #e9ecef; margin: 12px 0; }
-.message-text :deep(a) { color: #0969da; text-decoration: none; }
-.message-text :deep(a:hover) { text-decoration: underline; }
-.message-text :deep(strong) { font-weight: 600; }
-.message-text :deep(em) { font-style: italic; }
+.message-text :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  font-size: 0.9em;
+}
+
+.message-text :deep(table th),
+.message-text :deep(table td) {
+  border: 1px solid #dfe2e5;
+  padding: 6px 10px;
+}
+
+.message-text :deep(table th) {
+  background-color: rgba(0, 0, 0, 0.03);
+  font-weight: 600;
+}
+
+.message-text :deep(hr) {
+  border: none;
+  border-top: 1px solid #e9ecef;
+  margin: 12px 0;
+}
+
+.message-text :deep(a) {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.message-text :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.message-text :deep(strong) {
+  font-weight: 600;
+}
+
+.message-text :deep(em) {
+  font-style: italic;
+}
 
 /* 用户消息中的 Markdown 样式调整 */
-.user-message .message-text :deep(code) { background-color: rgba(255, 255, 255, 0.2); }
-.user-message .message-text :deep(pre) { background-color: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
+.user-message .message-text :deep(code) {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.user-message .message-text :deep(pre) {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
 
 .message-time {
   font-size: 12px;
@@ -556,9 +614,13 @@ export default {
 }
 
 @keyframes typing {
-  0%, 80%, 100% {
+
+  0%,
+  80%,
+  100% {
     transform: scale(0);
   }
+
   40% {
     transform: scale(1);
   }

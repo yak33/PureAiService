@@ -5,13 +5,8 @@
         <a-card class="form-card" title="✨ AI 图片编辑">
           <a-form :model="form" layout="vertical">
             <a-form-item label="上传图片">
-              <a-upload-dragger 
-                name="file" 
-                :show-upload-list="false" 
-                :before-upload="handleBeforeUpload" 
-                accept="image/*"
-                @paste.native="handlePaste"
-              >
+              <a-upload-dragger name="file" :show-upload-list="false" :before-upload="handleBeforeUpload"
+                accept="image/*" @paste.native="handlePaste">
                 <div v-if="!imageFile" class="upload-area">
                   <PictureOutlined class="upload-icon" />
                   <p class="upload-text">将图片拖拽到此处，或<em>点击上传</em></p>
@@ -29,18 +24,9 @@
             </a-form-item>
 
             <a-form-item label="图像编辑模型">
-              <a-select 
-                v-model:value="form.model" 
-                placeholder="选择图像编辑模型" 
-                :loading="loadingModels"
-                show-search
-                :filter-option="filterOption"
-              >
-                <a-select-option 
-                  v-for="model in editModels" 
-                  :key="model.id" 
-                  :value="model.id"
-                >
+              <a-select v-model:value="form.model" placeholder="选择图像编辑模型" :loading="loadingModels" show-search
+                :filter-option="filterOption">
+                <a-select-option v-for="model in editModels" :key="model.id" :value="model.id">
                   {{ model.id }}
                 </a-select-option>
               </a-select>
@@ -50,24 +36,14 @@
             </a-form-item>
 
             <a-form-item label="编辑指令">
-              <a-textarea
-                v-model:value="form.instruction"
-                :rows="4"
+              <a-textarea v-model:value="form.instruction" :rows="4"
                 placeholder="描述你想要对图片进行的修改，例如：&#10;- 把背景改成海滩&#10;- 给人物添加一顶帽子&#10;- 将天空变成日落效果&#10;- 去掉图片中的文字"
-                :maxlength="500"
-                show-count
-                :auto-size="{ minRows: 4, maxRows: 8 }"
-              />
+                :maxlength="500" show-count :auto-size="{ minRows: 4, maxRows: 8 }" />
             </a-form-item>
 
             <a-form-item>
               <a-space>
-                <a-button 
-                  type="primary" 
-                  @click="editImage" 
-                  :loading="loading" 
-                  :disabled="!canEdit"
-                >
+                <a-button type="primary" @click="editImage" :loading="loading" :disabled="!canEdit">
                   <EditOutlined />
                   <span>开始编辑</span>
                 </a-button>
@@ -81,12 +57,7 @@
 
           <a-divider>快速指令模板</a-divider>
           <div class="quick-templates">
-            <a-tag 
-              v-for="template in templates" 
-              :key="template" 
-              class="template-tag"
-              @click="useTemplate(template)"
-            >
+            <a-tag v-for="template in templates" :key="template" class="template-tag" @click="useTemplate(template)">
               {{ template }}
             </a-tag>
           </div>
@@ -133,11 +104,7 @@
           </div>
 
           <div v-else-if="error" class="result-placeholder">
-            <a-result
-              status="error"
-              title="编辑失败"
-              :sub-title="error"
-            >
+            <a-result status="error" title="编辑失败" :sub-title="error">
               <template #extra>
                 <a-button type="primary" @click="error = null">
                   知道了
@@ -192,12 +159,7 @@
     </a-card>
 
     <!-- 图片对比模态框 -->
-    <a-modal 
-      v-model:open="compareModalVisible" 
-      title="图片对比" 
-      width="80%"
-      :footer="null"
-    >
+    <a-modal v-model:open="compareModalVisible" title="图片对比" width="80%" :footer="null">
       <div class="compare-container">
         <div class="compare-image">
           <h4>原图</h4>
@@ -212,14 +174,8 @@
     </a-modal>
 
     <!-- 图片预览模态框 -->
-    <a-modal 
-      v-model:open="imageModalVisible" 
-      title="图片预览" 
-      width="80%"
-      :footer="null"
-      centered
-      @after-close="resetImageTransform"
-    >
+    <a-modal v-model:open="imageModalVisible" title="图片预览" width="80%" :footer="null" centered
+      @after-close="resetImageTransform">
       <template #extra>
         <a-space>
           <a-button size="small" @click="zoomIn">
@@ -234,21 +190,9 @@
           <a-tag>{{ Math.round(imageScale * 100) }}%</a-tag>
         </a-space>
       </template>
-      <div 
-        class="image-modal-content" 
-        @wheel="handleWheel"
-        @mousedown="startDrag"
-        @mousemove="onDrag"
-        @mouseup="stopDrag"
-        @mouseleave="stopDrag"
-      >
-        <img 
-          :src="imagePreview" 
-          alt="图片预览" 
-          class="modal-image"
-          :style="imageTransformStyle"
-          @dragstart.prevent
-        />
+      <div class="image-modal-content" @wheel="handleWheel" @mousedown="startDrag" @mousemove="onDrag"
+        @mouseup="stopDrag" @mouseleave="stopDrag">
+        <img :src="imagePreview" alt="图片预览" class="modal-image" :style="imageTransformStyle" @dragstart.prevent />
       </div>
     </a-modal>
   </div>
@@ -268,6 +212,7 @@ import {
   MinusOutlined
 } from '@ant-design/icons-vue'
 import { getCachedModels, setCachedModels } from '../utils/modelCache'
+import eventBus, { EVENT_MODELS_UPDATED } from '../utils/eventBus'
 
 export default {
   name: 'ImageEdit',
@@ -321,6 +266,9 @@ export default {
     await this.loadAvailableModels()
     // 添加全局粘贴事件监听
     window.addEventListener('paste', this.handlePaste)
+
+    // 监听模型更新事件
+    eventBus.on(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
   },
   computed: {
     canEdit() {
@@ -338,10 +286,10 @@ export default {
       if (this.editedImageDirectUrl) {
         return this.editedImageDirectUrl
       }
-      
+
       // 如果有 base64 数据，使用 base64
       if (!this.editedImage) return null
-      
+
       // 如果已经是完整的 data URL
       if (this.editedImage.startsWith('data:image')) {
         return this.editedImage
@@ -356,7 +304,7 @@ export default {
       const cachedModels = getCachedModels()
       if (cachedModels && cachedModels.length > 0) {
         // 筛选出图像编辑模型（包含 Edit 的模型）
-        this.editModels = cachedModels.filter(m => 
+        this.editModels = cachedModels.filter(m =>
           m.id.includes('Edit') || m.id.includes('edit')
         )
         if (!this.form.model && this.editModels.length > 0) {
@@ -374,7 +322,7 @@ export default {
         if (response.data.models && response.data.models.length > 0) {
           setCachedModels(response.data.models)
           // 筛选出图像编辑模型
-          this.editModels = response.data.models.filter(m => 
+          this.editModels = response.data.models.filter(m =>
             m.id.includes('Edit') || m.id.includes('edit')
           )
           if (!this.form.model && this.editModels.length > 0) {
@@ -440,22 +388,22 @@ export default {
 
         if (response.data.success) {
           this.result = response.data
-          
+
           // 优先使用直接 URL（浏览器可以访问）
           if (response.data.image_url) {
             this.editedImageDirectUrl = response.data.image_url
           }
-          
+
           // 如果有 base64 数据也保存（作为备用）
           if (response.data.edited_image) {
             this.editedImage = response.data.edited_image
           }
-          
+
           message.success('图片编辑完成！')
         } else {
           // 显示详细的错误信息
           let errorMsg = response.data.error || '编辑失败'
-          
+
           // 如果是内容敏感错误，追加中文提示
           if (errorMsg.includes('prohibited') || errorMsg.includes('sensitive')) {
             errorMsg = errorMsg + '\n\n提示：图片或指令包含敏感内容，请调整后重试'
@@ -463,7 +411,7 @@ export default {
           } else {
             message.error(errorMsg, 5)
           }
-          
+
           this.error = errorMsg
         }
       } catch (error) {
@@ -519,7 +467,7 @@ export default {
         .then(res => res.blob())
         .then(blob => {
           const file = new File([blob], `edited_${Date.now()}.png`, { type: 'image/png' })
-          
+
           if (this.imagePreview) {
             URL.revokeObjectURL(this.imagePreview)
           }
@@ -530,7 +478,7 @@ export default {
           this.editedImageDirectUrl = null
           this.result = null
           this.form.instruction = ''
-          
+
           message.success('已将编辑后的图片设为新的编辑源')
         })
         .catch(error => {
@@ -666,12 +614,38 @@ export default {
      */
     stopDrag() {
       this.isDragging = false
+    },
+
+    /**
+     * 处理模型更新事件
+     * 当模型配置被修改时，重新加载模型列表
+     */
+    async handleModelsUpdated(data) {
+      console.log('收到模型更新通知:', data)
+      message.info('模型列表已更新，正在刷新...', 2)
+
+      // 重新加载模型列表（会从后端获取最新数据，因为缓存已被清除）
+      await this.loadAvailableModels()
+
+      // 如果当前选择的模型不在新的模型列表中，自动切换到第一个图像编辑模型
+      if (this.form.model && !this.editModels.some(m => m.id === this.form.model)) {
+        if (this.editModels.length > 0) {
+          const qwenEditModel = this.editModels.find(m => m.id.includes('Qwen-Image-Edit'))
+          this.form.model = qwenEditModel ? qwenEditModel.id : this.editModels[0].id
+          message.warning('原模型已被移除，已自动切换到: ' + this.form.model, 3)
+        } else {
+          this.form.model = ''
+          message.warning('当前没有可用的图像编辑模型，请先在模型管理页面配置', 4)
+        }
+      }
     }
   },
 
   beforeUnmount() {
     // 移除事件监听
     window.removeEventListener('paste', this.handlePaste)
+    eventBus.off(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
+
     if (this.imagePreview) {
       URL.revokeObjectURL(this.imagePreview)
     }
