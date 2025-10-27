@@ -7,10 +7,15 @@
             <a-row :gutter="20">
               <a-col :span="24" :md="12">
                 <a-form-item label="生成模型">
-                  <a-select v-model:value="form.model" placeholder="选择AI模型">
-                    <a-select-option value="zai-org/GLM-4.5">GLM-4.5 (推荐)</a-select-option>
-                    <a-select-option value="moonshotai/Kimi-K2-Instruct-0905">Kimi-K2</a-select-option>
+                  <a-select v-model:value="form.model" placeholder="选择AI模型" :loading="loadingModels" show-search
+                    :filter-option="filterOption">
+                    <a-select-option v-for="model in availableModels" :key="model.id" :value="model.id">
+                      {{ model.id }}
+                    </a-select-option>
                   </a-select>
+                  <div v-if="!loadingModels && availableModels.length === 0" style="margin-top: 8px;">
+                    <a-alert type="warning" message="请先在模型管理页面配置可用模型" show-icon />
+                  </div>
                 </a-form-item>
               </a-col>
 
@@ -33,24 +38,14 @@
             </a-form-item>
 
             <a-form-item label="基础描述">
-              <a-textarea
-                v-model:value="form.prompt"
-                :rows="4"
-                placeholder="请输入您想要的图像基础描述，例如：一只可爱的小猫在花园里玩耍"
-                :maxlength="500"
-                show-count
-                :auto-size="{ minRows: 4, maxRows: 10 }"
-              />
+              <a-textarea v-model:value="form.prompt" :rows="4" placeholder="请输入您想要的图像基础描述，例如：一只可爱的小猫在花园里玩耍"
+                :maxlength="500" show-count :auto-size="{ minRows: 4, maxRows: 10 }" />
             </a-form-item>
 
             <a-form-item>
               <a-space>
-                <a-button
-                  type="primary"
-                  @click="generateDescription"
-                  :loading="loading"
-                  :disabled="!form.prompt.trim()"
-                >
+                <a-button type="primary" @click="generateDescription" :loading="loading"
+                  :disabled="!form.prompt.trim()">
                   <HighlightOutlined />
                   <span>生成描述</span>
                 </a-button>
@@ -80,11 +75,7 @@
               <a-tag color="warning">数量: {{ results.length }}</a-tag>
             </div>
 
-            <div
-              v-for="(result, index) in results"
-              :key="index"
-              class="description-item"
-            >
+            <div v-for="(result, index) in results" :key="index" class="description-item">
               <div class="description-header">
                 <h4>描述 {{ index + 1 }}</h4>
                 <div class="description-actions">
@@ -122,13 +113,7 @@
           </div>
         </a-card>
 
-        <a-alert
-          v-if="error"
-          type="error"
-          show-icon
-          class="error-alert"
-          :message="error"
-        />
+        <a-alert v-if="error" type="error" show-icon class="error-alert" :message="error" />
       </a-col>
     </a-row>
 
@@ -137,12 +122,7 @@
         <div class="example-category">
           <h4>人物场景</h4>
           <div class="example-tags">
-            <a-tag
-              v-for="example in personExamples"
-              :key="example"
-              class="example-tag"
-              @click="useExample(example)"
-            >
+            <a-tag v-for="example in personExamples" :key="example" class="example-tag" @click="useExample(example)">
               {{ example }}
             </a-tag>
           </div>
@@ -151,12 +131,7 @@
         <div class="example-category">
           <h4>自然风景</h4>
           <div class="example-tags">
-            <a-tag
-              v-for="example in natureExamples"
-              :key="example"
-              class="example-tag"
-              @click="useExample(example)"
-            >
+            <a-tag v-for="example in natureExamples" :key="example" class="example-tag" @click="useExample(example)">
               {{ example }}
             </a-tag>
           </div>
@@ -165,12 +140,7 @@
         <div class="example-category">
           <h4>物品静物</h4>
           <div class="example-tags">
-            <a-tag
-              v-for="example in objectExamples"
-              :key="example"
-              class="example-tag"
-              @click="useExample(example)"
-            >
+            <a-tag v-for="example in objectExamples" :key="example" class="example-tag" @click="useExample(example)">
               {{ example }}
             </a-tag>
           </div>
@@ -189,6 +159,8 @@ import {
   CopyOutlined,
   ReloadOutlined
 } from '@ant-design/icons-vue'
+import { getCachedModels, setCachedModels } from '../utils/modelCache'
+import eventBus, { EVENT_MODELS_UPDATED } from '../utils/eventBus'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
@@ -204,9 +176,11 @@ export default {
   data() {
     return {
       loading: false,
+      loadingModels: false,
+      availableModels: [],
       form: {
         prompt: '',
-        model: 'zai-org/GLM-4.5',
+        model: '',
         style: 'realistic',
         n: 1
       },
@@ -233,7 +207,53 @@ export default {
       ]
     }
   },
+  async mounted() {
+    await this.loadAvailableModels()
+    // 监听模型更新事件
+    eventBus.on(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
+  },
+  beforeUnmount() {
+    // 移除事件监听
+    eventBus.off(EVENT_MODELS_UPDATED, this.handleModelsUpdated)
+  },
   methods: {
+    async loadAvailableModels() {
+      // 先尝试从缓存读取
+      const cachedModels = getCachedModels()
+      if (cachedModels && cachedModels.length > 0) {
+        this.availableModels = cachedModels
+        if (!this.form.model && this.availableModels.length > 0) {
+          // 优先选择GLM模型
+          const glmModel = this.availableModels.find(m => m.id.includes('GLM'))
+          this.form.model = glmModel ? glmModel.id : this.availableModels[0].id
+        }
+        return
+      }
+
+      // 缓存不存在或过期，从后端加载
+      this.loadingModels = true
+      try {
+        const response = await aiService.getModels()
+        if (response.data.models && response.data.models.length > 0) {
+          this.availableModels = response.data.models
+          setCachedModels(this.availableModels)
+          if (!this.form.model && this.availableModels.length > 0) {
+            // 优先选择GLM模型
+            const glmModel = this.availableModels.find(m => m.id.includes('GLM'))
+            this.form.model = glmModel ? glmModel.id : this.availableModels[0].id
+          }
+        }
+      } catch (error) {
+        console.error('加载模型列表失败:', error)
+      } finally {
+        this.loadingModels = false
+      }
+    },
+
+    filterOption(input, option) {
+      return option.value.toLowerCase().includes(input.toLowerCase())
+    },
+
     async generateDescription() {
       if (!this.form.prompt.trim()) {
         message.warning('请输入基础描述')
@@ -321,11 +341,11 @@ export default {
       }
       return labels[style] || style
     },
-    
+
     renderMarkdown(content) {
       if (!content) return ''
       marked.setOptions({
-        highlight: function(code, lang) {
+        highlight: function (code, lang) {
           if (lang && hljs.getLanguage(lang)) {
             try {
               return hljs.highlight(code, { language: lang }).value
@@ -339,6 +359,31 @@ export default {
         gfm: true
       })
       return marked.parse(content)
+    },
+
+    /**
+     * 处理模型更新事件
+     * 当模型配置被修改时，重新加载模型列表
+     */
+    async handleModelsUpdated(data) {
+      console.log('收到模型更新通知:', data)
+      message.info('模型列表已更新，正在刷新...', 2)
+
+      // 重新加载模型列表
+      await this.loadAvailableModels()
+
+      // 如果当前选择的模型不在新的模型列表中，自动切换到第一个
+      if (this.form.model && !this.availableModels.some(m => m.id === this.form.model)) {
+        if (this.availableModels.length > 0) {
+          // 优先选择GLM模型
+          const glmModel = this.availableModels.find(m => m.id.includes('GLM'))
+          this.form.model = glmModel ? glmModel.id : this.availableModels[0].id
+          message.warning('原模型已被移除，已自动切换到: ' + this.form.model, 3)
+        } else {
+          this.form.model = ''
+          message.warning('当前没有可用模型，请先在模型管理页面配置', 4)
+        }
+      }
     }
   }
 }
@@ -410,19 +455,44 @@ export default {
 }
 
 /* Markdown 样式 */
-.description-content :deep(h1), .description-content :deep(h2), .description-content :deep(h3),
-.description-content :deep(h4), .description-content :deep(h5), .description-content :deep(h6) {
+.description-content :deep(h1),
+.description-content :deep(h2),
+.description-content :deep(h3),
+.description-content :deep(h4),
+.description-content :deep(h5),
+.description-content :deep(h6) {
   margin: 16px 0 8px;
   font-weight: 600;
   line-height: 1.25;
 }
-.description-content :deep(h1) { font-size: 1.5em; }
-.description-content :deep(h2) { font-size: 1.3em; }
-.description-content :deep(h3) { font-size: 1.1em; }
 
-.description-content :deep(p) { margin: 8px 0; line-height: 1.6; }
-.description-content :deep(ul), .description-content :deep(ol) { padding-left: 1.5em; margin: 8px 0; }
-.description-content :deep(li) { margin: 4px 0; line-height: 1.6; }
+.description-content :deep(h1) {
+  font-size: 1.5em;
+}
+
+.description-content :deep(h2) {
+  font-size: 1.3em;
+}
+
+.description-content :deep(h3) {
+  font-size: 1.1em;
+}
+
+.description-content :deep(p) {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.description-content :deep(ul),
+.description-content :deep(ol) {
+  padding-left: 1.5em;
+  margin: 8px 0;
+}
+
+.description-content :deep(li) {
+  margin: 4px 0;
+  line-height: 1.6;
+}
 
 .description-content :deep(code) {
   background-color: rgba(27, 31, 35, 0.05);
@@ -457,14 +527,45 @@ export default {
   margin: 8px 0;
 }
 
-.description-content :deep(table) { border-collapse: collapse; width: 100%; margin: 8px 0; }
-.description-content :deep(table th), .description-content :deep(table td) { border: 1px solid #dfe2e5; padding: 6px 10px; }
-.description-content :deep(table th) { background-color: #f6f8fa; font-weight: 600; }
-.description-content :deep(hr) { border: none; border-top: 1px solid #e9ecef; margin: 12px 0; }
-.description-content :deep(a) { color: #0969da; text-decoration: none; }
-.description-content :deep(a:hover) { text-decoration: underline; }
-.description-content :deep(strong) { font-weight: 600; }
-.description-content :deep(em) { font-style: italic; }
+.description-content :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.description-content :deep(table th),
+.description-content :deep(table td) {
+  border: 1px solid #dfe2e5;
+  padding: 6px 10px;
+}
+
+.description-content :deep(table th) {
+  background-color: #f6f8fa;
+  font-weight: 600;
+}
+
+.description-content :deep(hr) {
+  border: none;
+  border-top: 1px solid #e9ecef;
+  margin: 12px 0;
+}
+
+.description-content :deep(a) {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.description-content :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.description-content :deep(strong) {
+  font-weight: 600;
+}
+
+.description-content :deep(em) {
+  font-style: italic;
+}
 
 .result-placeholder {
   display: flex;

@@ -23,15 +23,15 @@
               </a-upload-dragger>
             </a-form-item>
 
-            <a-form-item label="图像编辑模型">
-              <a-select v-model:value="form.model" placeholder="选择图像编辑模型" :loading="loadingModels" show-search
+            <a-form-item label="AI模型">
+              <a-select v-model:value="form.model" placeholder="选择AI模型" :loading="loadingModels" show-search
                 :filter-option="filterOption">
-                <a-select-option v-for="model in editModels" :key="model.id" :value="model.id">
+                <a-select-option v-for="model in availableModels" :key="model.id" :value="model.id">
                   {{ model.id }}
                 </a-select-option>
               </a-select>
-              <div v-if="!loadingModels && editModels.length === 0" style="margin-top: 8px;">
-                <a-alert type="warning" message="请先在模型管理页面配置图像编辑模型" show-icon />
+              <div v-if="!loadingModels && availableModels.length === 0" style="margin-top: 8px;">
+                <a-alert type="warning" message="请先在模型管理页面配置可用模型" show-icon />
               </div>
             </a-form-item>
 
@@ -230,7 +230,7 @@ export default {
     return {
       loading: false,
       loadingModels: false,
-      editModels: [],
+      availableModels: [],
       form: {
         instruction: '',
         model: ''
@@ -303,14 +303,13 @@ export default {
       // 先尝试从缓存读取
       const cachedModels = getCachedModels()
       if (cachedModels && cachedModels.length > 0) {
-        // 筛选出图像编辑模型（包含 Edit 的模型）
-        this.editModels = cachedModels.filter(m =>
-          m.id.includes('Edit') || m.id.includes('edit')
-        )
-        if (!this.form.model && this.editModels.length > 0) {
-          // 优先选择 Qwen-Image-Edit
-          const qwenEditModel = this.editModels.find(m => m.id.includes('Qwen-Image-Edit'))
-          this.form.model = qwenEditModel ? qwenEditModel.id : this.editModels[0].id
+        this.availableModels = cachedModels
+        if (!this.form.model && this.availableModels.length > 0) {
+          // 优先选择包含编辑功能的模型
+          const editModel = this.availableModels.find(m =>
+            m.id.includes('Edit') || m.id.includes('edit')
+          )
+          this.form.model = editModel ? editModel.id : this.availableModels[0].id
         }
         return
       }
@@ -320,15 +319,14 @@ export default {
       try {
         const response = await aiService.getModels()
         if (response.data.models && response.data.models.length > 0) {
-          setCachedModels(response.data.models)
-          // 筛选出图像编辑模型
-          this.editModels = response.data.models.filter(m =>
-            m.id.includes('Edit') || m.id.includes('edit')
-          )
-          if (!this.form.model && this.editModels.length > 0) {
-            // 优先选择 Qwen-Image-Edit
-            const qwenEditModel = this.editModels.find(m => m.id.includes('Qwen-Image-Edit'))
-            this.form.model = qwenEditModel ? qwenEditModel.id : this.editModels[0].id
+          this.availableModels = response.data.models
+          setCachedModels(this.availableModels)
+          if (!this.form.model && this.availableModels.length > 0) {
+            // 优先选择包含编辑功能的模型
+            const editModel = this.availableModels.find(m =>
+              m.id.includes('Edit') || m.id.includes('edit')
+            )
+            this.form.model = editModel ? editModel.id : this.availableModels[0].id
           }
         }
       } catch (error) {
@@ -627,15 +625,18 @@ export default {
       // 重新加载模型列表（会从后端获取最新数据，因为缓存已被清除）
       await this.loadAvailableModels()
 
-      // 如果当前选择的模型不在新的模型列表中，自动切换到第一个图像编辑模型
-      if (this.form.model && !this.editModels.some(m => m.id === this.form.model)) {
-        if (this.editModels.length > 0) {
-          const qwenEditModel = this.editModels.find(m => m.id.includes('Qwen-Image-Edit'))
-          this.form.model = qwenEditModel ? qwenEditModel.id : this.editModels[0].id
+      // 如果当前选择的模型不在新的模型列表中，自动切换到第一个
+      if (this.form.model && !this.availableModels.some(m => m.id === this.form.model)) {
+        if (this.availableModels.length > 0) {
+          // 优先选择包含编辑功能的模型
+          const editModel = this.availableModels.find(m =>
+            m.id.includes('Edit') || m.id.includes('edit')
+          )
+          this.form.model = editModel ? editModel.id : this.availableModels[0].id
           message.warning('原模型已被移除，已自动切换到: ' + this.form.model, 3)
         } else {
           this.form.model = ''
-          message.warning('当前没有可用的图像编辑模型，请先在模型管理页面配置', 4)
+          message.warning('当前没有可用模型，请先在模型管理页面配置', 4)
         }
       }
     }
