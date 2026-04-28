@@ -73,13 +73,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                         if "application/json" in content_type:
                             try:
                                 log_data["body"] = json.loads(body.decode())
-                            except:
+                            except Exception:
                                 log_data["body"] = body.decode()[:500]
                         elif "multipart/form-data" in content_type:
                             log_data["body"] = "[FormData - 文件上传]"
                         else:
                             log_data["body"] = body.decode()[:500]
-                except:
+                except Exception:
                     log_data["body"] = "[无法读取请求体]"
             
             # 打印请求日志
@@ -104,32 +104,41 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def _log_response(self, response: Response, request_id: str, process_time: float):
         """记录响应信息"""
         try:
-            # 读取响应体
+            # 流式响应不缓冲 body，避免破坏流式传输和 OOM 风险
+            if isinstance(response, StreamingResponse):
+                app_logger.info(f"📤 响应 [{request_id}]")
+                app_logger.info(f"  状态码: {response.status_code}")
+                app_logger.info(f"  处理时间: {process_time:.3f}秒")
+                app_logger.info(f"  响应体: [StreamingResponse - 不记录]")
+                app_logger.info("=" * 80)
+                return response
+
+            # 非流式响应正常读取 body
             response_body = b""
             async for chunk in response.body_iterator:
                 response_body += chunk
-            
+
             # 解析响应体
             response_data = None
             if response_body:
                 try:
                     response_data = json.loads(response_body.decode())
-                except:
+                except Exception:
                     response_data = response_body.decode()[:500]
-            
+
             # 打印响应日志
             app_logger.info(f"📤 响应 [{request_id}]")
             app_logger.info(f"  状态码: {response.status_code}")
             app_logger.info(f"  处理时间: {process_time:.3f}秒")
-            
+
             if response_data:
                 if isinstance(response_data, dict):
                     app_logger.info(f"  响应体: {json.dumps(response_data, ensure_ascii=False, indent=2)}")
                 else:
                     app_logger.info(f"  响应体: {response_data}")
-            
+
             app_logger.info("=" * 80)
-            
+
             # 重新构造响应（因为body已经被读取）
             from starlette.responses import Response as StarletteResponse
             return StarletteResponse(

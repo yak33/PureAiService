@@ -3,6 +3,7 @@ AI服务API端点
 提供通用的AI调用接口，所有功能通过大模型实现
 """
 
+import asyncio
 import base64
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Body, Depends
@@ -137,6 +138,8 @@ async def save_models_config(models: List[Dict[str, Any]] = Body(...)):
             }
         else:
             raise HTTPException(status_code=500, detail="保存模型配置失败")
+    except HTTPException:
+        raise
     except Exception as e:
         app_logger.error(f"保存模型配置失败: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -302,13 +305,12 @@ async def batch_process(
 ):
     """
     批量处理接口
-    支持一次性处理多个AI任务
+    支持一次性并发处理多个AI任务
     """
-    results = []
-    for task in tasks:
+
+    async def _process_single_task(task: Dict[str, Any]) -> Dict[str, Any]:
+        task_type = task.get("type", "text")
         try:
-            task_type = task.get("type", "text")
-            
             if task_type == "text":
                 result = await ai_service.analyze_text(
                     text=task.get("text", ""),
@@ -332,17 +334,11 @@ async def batch_process(
                 )
             else:
                 result = {"success": False, "error": f"Unknown task type: {task_type}"}
-            
-            results.append({
-                "task_id": task.get("id"),
-                "result": result
-            })
+            return {"task_id": task.get("id"), "result": result}
         except Exception as e:
-            results.append({
-                "task_id": task.get("id"),
-                "error": str(e)
-            })
-    
+            return {"task_id": task.get("id"), "error": str(e)}
+
+    results = await asyncio.gather(*[_process_single_task(t) for t in tasks])
     return {"results": results}
 
 
@@ -398,15 +394,3 @@ async def edit_image(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/debug/config")
-async def debug_config():
-    """
-    调试配置信息（临时）
-    """
-    app_logger.debug("收到调试配置请求")
-    return {
-        "api_key_length": len(ai_service.api_key) if ai_service.api_key else 0,
-        "api_key_prefix": ai_service.api_key[:10] if ai_service.api_key else None,
-        "base_url": ai_service.base_url,
-        "default_model": ai_service.default_model
-    }

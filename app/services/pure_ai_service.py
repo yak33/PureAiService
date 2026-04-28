@@ -16,23 +16,34 @@ from app.core.logger import app_logger
 
 class PureAIService:
     """纯AI服务类，所有功能通过大模型API实现"""
-    
+
     def __init__(self):
         """初始化AI服务配置"""
         # 从配置中获取API密钥和基础URL
         self.api_key = settings.openai_api_key
         self.base_url = settings.openai_base_url.rstrip("/")
         self.timeout = settings.api_timeout
-        
+
         # 设置请求头，硅基流动平台需要特定的认证格式
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        
+
         # 设置默认模型和超时配置
         self.default_model = settings.default_model
         self._timeout = httpx.Timeout(self.timeout)
+
+        # 复用单一 AsyncClient，避免每次请求重建 TCP/TLS 连接
+        self._client = httpx.AsyncClient(
+            base_url=self.base_url,
+            headers=self.headers,
+            timeout=self._timeout,
+        )
+
+    async def close(self):
+        """关闭 HTTP 客户端（应用关闭时调用）"""
+        await self._client.aclose()
         
     async def call_ai(
         self, 
@@ -74,7 +85,6 @@ class PureAIService:
 
             # 记录API配置信息用于调试
             app_logger.info(f"API配置检查 - base_url: {self.base_url}")
-            app_logger.info(f"API配置检查 - api_key前8位: {self.api_key[:8]}...")
             app_logger.debug(f"API配置检查 - headers: {self._redact_headers(self.headers)}")
 
             # 记录调用信息
@@ -96,70 +106,65 @@ class PureAIService:
                 "stream": stream,
             }
 
-            # 创建异步HTTP客户端并发送请求
-            async with httpx.AsyncClient(
-                base_url=self.base_url,
-                headers=self.headers,
-                timeout=self._timeout,
-            ) as client:
-                endpoint = "/chat/completions"
-                app_logger.info(f"完整请求路径: {endpoint}")
-                app_logger.debug(f"请求payload: {payload}")
+            # 复用已有的异步HTTP客户端
+            endpoint = "/chat/completions"
+            app_logger.info(f"完整请求路径: {endpoint}")
+            app_logger.debug(f"请求payload: {payload}")
 
-                # 根据是否流式输出选择不同的处理方式
-                if stream:
-                    async with client.stream("POST", endpoint, json=payload) as response:
-                        app_logger.info(f"响应状态码: {response.status_code}")
-                        app_logger.info(f"响应头: {dict(response.headers)}")
+            # 根据是否流式输出选择不同的处理方式
+            if stream:
+                async with self._client.stream("POST", endpoint, json=payload) as response:
+                    app_logger.info(f"响应状态码: {response.status_code}")
+                    app_logger.info(f"响应头: {dict(response.headers)}")
 
-                        # 处理错误响应
-                        if not response.is_success:
-                            return await self._build_error_response(response)
+                    # 处理错误响应
+                    if not response.is_success:
+                        return await self._build_error_response(response)
 
-                        # 处理流式响应
-                        return await self._consume_stream_response(response)
+                    # 处理流式响应
+                    return await self._consume_stream_response(response)
 
-                # 非流式请求处理
-                response = await client.post(endpoint, json=payload)
-                app_logger.info(f"响应状态码: {response.status_code}")
-                app_logger.info(f"响应头: {dict(response.headers)}")
+            # 非流式请求处理
+            response = await self._client.post(endpoint, json=payload)
+            app_logger.info(f"响应状态码: {response.status_code}")
+            app_logger.info(f"响应头: {dict(response.headers)}")
 
-                # 处理错误响应
-                if not response.is_success:
-                    return await self._build_error_response(response)
+            # 处理错误响应
+            if not response.is_success:
+                return await self._build_error_response(response)
 
-                # 解析JSON响应
-                try:
-                    result = response.json()
-                except json.JSONDecodeError as exc:
-                    app_logger.error(f"解析响应JSON失败: {exc}")
-                    return {
-                        "success": False,
-                        "error": f"解析响应JSON失败: {exc}",
-                        "status_code": response.status_code,
-                        "details": response.text,
-                    }
-
-                # 提取响应信息
-                usage = result.get("usage", {})
-                finish_reason = result.get("choices", [{}])[0].get("finish_reason")
-
-                # 记录成功调用信息
-                app_logger.info(
-                    "AI模型调用成功: model=%s, finish_reason=%s",
-                    result.get("model"),
-                    finish_reason,
-                )
-                app_logger.debug(f"AI响应 usage: {usage}")
-
-                # 返回成功结果
+            # 解析JSON响应
+            try:
+                result = response.json()
+            except json.JSONDecodeError as exc:
+                app_logger.error(f"解析响应JSON失败: {exc}")
                 return {
-                    "success": True,
-                    "content": result.get("choices", [{}])[0].get("message", {}).get("content"),
-                    "model": result.get("model"),
-                    "usage": usage,
-                    "finish_reason": finish_reason,
+                    "success": False,
+                    "error": f"解析响应JSON失败: {exc}",
+                    "status_code": response.status_code,
+                    "details": response.text,
                 }
+
+            # 提取响应信息
+            usage = result.get("usage", {})
+            finish_reason = result.get("choices", [{}])[0].get("finish_reason")
+
+            # 记录成功调用信息
+            app_logger.info(
+                "AI模型调用成功: model=%s, finish_reason=%s",
+                result.get("model"),
+                finish_reason,
+            )
+            app_logger.debug(f"AI响应 usage: {usage}")
+
+            # 返回成功结果
+            return {
+                "success": True,
+                "content": result.get("choices", [{}])[0].get("message", {}).get("content"),
+                "model": result.get("model"),
+                "usage": usage,
+                "finish_reason": finish_reason,
+            }
 
         except RequestError as exc:
             # 处理HTTP请求异常
@@ -720,26 +725,21 @@ class PureAIService:
                 params['sub_type'] = sub_type
             
             app_logger.info(f"获取平台模型列表: type={model_type}, sub_type={sub_type}")
-            
-            # 调用硅基流动API
-            async with httpx.AsyncClient(
-                base_url=self.base_url,
-                headers=self.headers,
-                timeout=self._timeout
-            ) as client:
-                response = await client.get("/models", params=params)
-                
-                app_logger.info(f"平台模型列表响应状态码: {response.status_code}")
-                
-                if not response.is_success:
-                    return await self._build_error_response(response)
-                
-                result = response.json()
-                
-                return {
-                    "success": True,
-                    "data": result
-                }
+
+            # 调用硅基流动API（复用客户端）
+            response = await self._client.get("/models", params=params)
+
+            app_logger.info(f"平台模型列表响应状态码: {response.status_code}")
+
+            if not response.is_success:
+                return await self._build_error_response(response)
+
+            result = response.json()
+
+            return {
+                "success": True,
+                "data": result
+            }
                 
         except Exception as e:
             app_logger.error(f"获取平台模型列表失败: {str(e)}")
@@ -767,33 +767,28 @@ class PureAIService:
         """
         try:
             app_logger.info("获取用户账户信息")
-            
-            # 调用硅基流动API
-            async with httpx.AsyncClient(
-                base_url=self.base_url,
-                headers=self.headers,
-                timeout=self._timeout
-            ) as client:
-                response = await client.get("/user/info")
-                
-                app_logger.info(f"用户信息响应状态码: {response.status_code}")
-                
-                if not response.is_success:
-                    return await self._build_error_response(response)
-                
-                result = response.json()
-                
-                # 硅基流动返回格式: {"code": 20000, "status": true, "data": {...}}
-                if result.get("code") == 20000 and result.get("status"):
-                    return {
-                        "success": True,
-                        "data": result.get("data", {})
-                    }
-                else:
-                    return {
-                        "success": False,
-                        "error": result.get("message", "获取用户信息失败")
-                    }
+
+            # 调用硅基流动API（复用客户端）
+            response = await self._client.get("/user/info")
+
+            app_logger.info(f"用户信息响应状态码: {response.status_code}")
+
+            if not response.is_success:
+                return await self._build_error_response(response)
+
+            result = response.json()
+
+            # 硅基流动返回格式: {"code": 20000, "status": true, "data": {...}}
+            if result.get("code") == 20000 and result.get("status"):
+                return {
+                    "success": True,
+                    "data": result.get("data", {})
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.get("message", "获取用户信息失败")
+                }
                 
         except Exception as e:
             app_logger.error(f"获取用户信息失败: {str(e)}")
@@ -917,72 +912,69 @@ class PureAIService:
             
             app_logger.info(f"开始图片编辑: model={model}, instruction={instruction[:100]}...")
             
-            # 发送请求到硅基流动平台
-            async with httpx.AsyncClient(
-                base_url=self.base_url,
-                headers=self.headers,
-                timeout=httpx.Timeout(120.0)
-            ) as client:
-                endpoint = "/images/generations"
-                response = await client.post(endpoint, json=payload)
-                
-                app_logger.info(f"图片编辑响应状态码: {response.status_code}")
-                
-                if not response.is_success:
-                    return await self._build_error_response(response)
-                
-                result = response.json()
-                
-                # 提取编辑后的图片 URL
-                images = result.get("images", [])
-                if not images:
-                    app_logger.error("图片编辑返回结果中没有图片")
-                    return {
-                        "success": False,
-                        "error": "图片编辑返回结果中没有图片"
-                    }
-                
-                image_url = images[0].get("url", "")
-                
-                if not image_url:
-                    app_logger.error("图片编辑返回的 URL 为空")
-                    return {
-                        "success": False,
-                        "error": "图片编辑返回的 URL 为空"
-                    }
-                
-                app_logger.info(f"图片编辑成功，URL: {image_url}")
-                
-                # 尝试下载图片并转换为 base64
-                # 如果下载失败（403），前端可以直接使用 URL
-                edited_image_base64 = None
-                try:
-                    app_logger.info(f"尝试下载编辑后的图片: {image_url}")
-                    # 添加必要的 headers 模拟浏览器请求
-                    download_headers = {
-                        **self.headers,
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                        "Referer": "https://cloud.siliconflow.cn/"
-                    }
-                    image_response = await client.get(image_url, headers=download_headers, follow_redirects=True)
-                    
-                    if image_response.is_success:
-                        # 将图片转换为 base64
-                        edited_image_base64 = base64.b64encode(image_response.content).decode('utf-8')
-                        app_logger.info("图片下载并转换为 base64 成功")
-                    else:
-                        app_logger.warning(f"下载图片失败 ({image_response.status_code})，将返回 URL 供前端使用")
-                except Exception as download_error:
-                    app_logger.warning(f"下载图片异常: {download_error}，将返回 URL 供前端使用")
-                
+            # 发送请求到硅基流动平台（复用客户端）
+            endpoint = "/images/generations"
+            # 图片编辑使用更长的超时时间
+            edit_timeout = httpx.Timeout(120.0)
+            response = await self._client.post(endpoint, json=payload, timeout=edit_timeout)
+
+            app_logger.info(f"图片编辑响应状态码: {response.status_code}")
+
+            if not response.is_success:
+                return await self._build_error_response(response)
+
+            result = response.json()
+
+            # 提取编辑后的图片 URL
+            images = result.get("images", [])
+            if not images:
+                app_logger.error("图片编辑返回结果中没有图片")
                 return {
-                    "success": True,
-                    "edited_image": edited_image_base64,  # 可能为 None
-                    "image_url": image_url,  # 始终返回 URL
-                    "model": model,
-                    "seed": result.get("seed"),
-                    "timings": result.get("timings", {})
+                    "success": False,
+                    "error": "图片编辑返回结果中没有图片"
                 }
+
+            image_url = images[0].get("url", "")
+
+            if not image_url:
+                app_logger.error("图片编辑返回的 URL 为空")
+                return {
+                    "success": False,
+                    "error": "图片编辑返回的 URL 为空"
+                }
+
+            app_logger.info(f"图片编辑成功，URL: {image_url}")
+
+            # 尝试下载图片并转换为 base64
+            # 如果下载失败（403），前端可以直接使用 URL
+            edited_image_base64 = None
+            try:
+                app_logger.info(f"尝试下载编辑后的图片: {image_url}")
+                # 添加必要的 headers 模拟浏览器请求
+                download_headers = {
+                    **self.headers,
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                    "Referer": "https://cloud.siliconflow.cn/"
+                }
+                image_response = await self._client.get(image_url, headers=download_headers, follow_redirects=True)
+
+                if image_response.is_success:
+                    # 将图片转换为 base64
+                    edited_image_base64 = base64.b64encode(image_response.content).decode('utf-8')
+                    app_logger.info("图片下载并转换为 base64 成功")
+                else:
+                    app_logger.warning(f"下载图片失败 ({image_response.status_code})，将返回 URL 供前端使用")
+            except Exception as download_error:
+                app_logger.warning(f"下载图片异常: {download_error}，将返回 URL 供前端使用")
+
+            return {
+                "success": True,
+                "edited_image": edited_image_base64,  # 可能为 None
+                "image_url": image_url,  # 始终返回 URL
+                "model": model,
+                "seed": result.get("seed"),
+                "timings": result.get("timings", {})
+            }
                 
         except Exception as e:
             app_logger.error(f"图片编辑失败: {str(e)}")

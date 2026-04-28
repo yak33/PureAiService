@@ -1,9 +1,6 @@
 import os
 from typing import List
-from pydantic_settings import BaseSettings
-from dotenv import load_dotenv
-
-load_dotenv(override=True)
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # 应用基本配置
@@ -40,8 +37,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     jwt_expire_minutes: int = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))
     
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()
 

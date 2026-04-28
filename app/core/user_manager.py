@@ -35,10 +35,9 @@ class UserManager:
     
     def _ensure_default_admin(self):
         """确保默认管理员账号存在"""
-        from dotenv import load_dotenv
-        load_dotenv()
-        default_username = os.getenv("DEFAULT_ADMIN_USERNAME", "admin")
-        default_password = os.getenv("DEFAULT_ADMIN_PASSWORD", "123456")
+        from app.core.config import settings
+        default_username = settings.default_admin_username
+        default_password = settings.default_admin_password
         default_nickname = "🍒樱桃七喜丸子"
         
         users = self._load_users()
